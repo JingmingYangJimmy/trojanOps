@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+/* USC look: docs/decisions.md #10 and .claude/agents/ui-designer.md. Light theme only. */
+:root {
+  --radius: 0.25rem;
+  --background: #ffffff; --foreground: #121212;
+  --card: #ffffff; --card-foreground: #121212;
+  --popover: #ffffff; --popover-foreground: #121212;
+  --primary: #990000; --primary-foreground: #ffffff; --primary-hover: #7a0000;
+  --secondary: #f0f0f0; --secondary-foreground: #121212;
+  --muted: #f5f5f5; --muted-foreground: #595959;
+  --accent: #f0f0f0; --accent-foreground: #121212;   /* shadcn's hover background: keep neutral */
+  --destructive: #990000;
+  --border: #e0e0e0; --input: #8d8d8d; --ring: #990000;
+  --gold: #ffcc00; --gold-25: #fff2bf;
+  --success: #1e7b34; --info: #2b5597; --attention-ink: #7a4e00;
+  --sidebar: #ffffff; --sidebar-foreground: #121212;
+  --sidebar-primary: #990000; --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f0f0f0; --sidebar-accent-foreground: #121212;
+  --sidebar-border: #e0e0e0; --sidebar-ring: #990000;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-primary-hover: var(--primary-hover);
+  --color-gold: var(--gold); --color-gold-25: var(--gold-25);
+  --color-success: var(--success); --color-info: var(--info); --color-attention-ink: var(--attention-ink);
+  --font-sans: var(--font-source-sans); --font-serif: var(--font-caslon); --font-mono: var(--font-source-code);
+  /* 2px chips, 4px controls and panels */
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius);
+}
+
+@utility shadow-overlay { box-shadow: 0 4px 16px rgb(0 0 0 / 0.12); }
+
+@layer base {
+  * { @apply border-border; }
+  html { @apply bg-background text-foreground font-sans; font-size: 14px; line-height: 20px; }
+  :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+}

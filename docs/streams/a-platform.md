@@ -7,8 +7,8 @@ Your paths are in `AGENTS.md`.
 
 | WP | Hours | Done when (full text: `docs/architecture.md` §16) |
 |---|---|---|
-| WP-0 (lead) | H0–2 | Repo runs; contracts and every schema file frozen with the area owners |
-| WP-1 | H2–5 | Tables, RLS, the `read_grants` trigger and `withActor`; the §10 visibility contract passes as `trojanops_app` |
+| WP-0 (lead) | H0–2 | Repo runs; contracts and every schema file frozen with the area owners; tables, role, RLS and trigger migrated; every stub merged |
+| WP-1 | H2–5 | `withActor` and the WP-0 RLS migration proven: the §10 visibility contract passes as `trojanops_app` |
 | WP-3 | H5–7 | Persona identity, active org, `grantsFor`, `capGrants`; Morgan and public-cap tests |
 | WP-4 | H7–11 | `runAgent` §7 steps 1–3 and 5–8 on the mock runtime with the audit writer by H9; quota and billing by H11 |
 | WP-13 | H12–14, to H16 if time | Floor: `recruiting-qa` answers through one model call with its accessible documents |
@@ -47,5 +47,6 @@ Stubs by H3, at their real paths.
 ## First prompt
 
 > Read `AGENTS.md`, `docs/architecture.md` §2, §5–§7 and §16, and `docs/streams/a-platform.md`.
-> Plan WP-1: tables, the RLS migration, the `read_grants` trigger, `withActor`, and
-> `tests/rls.test.ts` for the §10 contract. Edit only stream A paths. Show me the plan first.
+> Plan WP-1: `tests/rls.test.ts` for the §10 contract, run as `trojanops_app` through `withActor`
+> against the tables, RLS and `read_grants` trigger already in `db/migrations/`. Fix what the tests
+> find. Edit only stream A paths. Show me the plan first.

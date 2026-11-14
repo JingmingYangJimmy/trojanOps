@@ -169,8 +169,11 @@ Every screen uses real seed data (club names, document titles); never lorem ipsu
 - Hero sections, oversized rounded cards with soft shadows, pill badges everywhere.
 - Untouched shadcn defaults.
 - `pnpm check` greps `src/`:
-  - `bg-gradient|backdrop-blur|Sparkles|WandSparkles|shadow-(sm|md|lg|xl|2xl)` must match nothing;
-  - `rounded-full` may appear only in `src/components/ui/{avatar,switch,radio-group}.tsx`.
+  - gradients, `backdrop-blur`, `drop-shadow`, any `shadow` utility other than `shadow-overlay`
+    (including `shadow-xs`), and the Sparkles, Wand and Bot icons must match nothing;
+  - `rounded-full` may appear only in `src/components/ui/{avatar,switch,radio-group}.tsx`;
+  - no raw hex, `rgb()`, `hsl()`, `oklch()` or Tailwind palette colors (`bg-red-500`) outside
+    `src/app/globals.css`.
 - shadcn's DropdownMenu, Popover, Select, Dialog, Sheet, Card, Progress and Badge ship with shadows
   or pills. WP-2 restyles them when it adds them:
   - overlays use the `shadow-overlay` utility;
