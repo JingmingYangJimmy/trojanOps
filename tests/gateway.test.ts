@@ -1,16 +1,23 @@
 // Owner: A (WP-4 grows this). Gateway behaviour that C's and D's run pages rely on.
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { runAgent } from '@/lib/gateway';
 import { listAudit } from '@/lib/gateway/audit';
 import { getActor, ACTIVE_ORG_COOKIE, PERSONA_COOKIE } from '@/lib/identity';
 import { DOCUMENT, INSTALLATION, ORG, USER } from '@db/seed/ids';
+import { appSql, closeAppDb } from './db';
+
+const probe = await appSql();
+await probe?.end();
+afterAll(async () => {
+  if (probe) await closeAppDb();
+});
 
 const actorFor = (userId: string, orgId?: string) =>
   getActor(new Request('http://localhost/', {
     headers: { cookie: `${PERSONA_COOKIE}=${userId}${orgId ? `; ${ACTIVE_ORG_COOKIE}=${orgId}` : ''}` },
   }));
 
-describe('runAgent (stub)', () => {
+describe.skipIf(!probe)('runAgent (stub)', () => {
   it('runs funding-precheck for the treasurer with capped grants and the rule pack', async () => {
     const run = await runAgent(await actorFor(USER.taylor), INSTALLATION.startupFundingPrecheck, 'Can we fund pitch night?');
     expect(run.inspector.permitted.map((d) => d.id).sort()).toEqual(

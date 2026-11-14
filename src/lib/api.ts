@@ -30,8 +30,13 @@ export function route<P extends Record<string, string> = Record<string, string>>
   };
 }
 
-/** Parses a JSON body with zod; a bad body becomes ApiError `invalid`. */
+/** Parses a JSON body with zod; a bad body becomes ApiError `invalid`. The content type must be
+ * application/json, which a cross-site form can't send without a CORS preflight. */
 export async function parseBody<T>(req: Request, schema: z.ZodType<T>): Promise<T> {
+  const type = req.headers.get('content-type')?.split(';')[0].trim().toLowerCase();
+  if (type !== 'application/json') {
+    throw new AppError({ code: 'invalid', message: 'The request body must be JSON (Content-Type: application/json).' });
+  }
   let raw: unknown;
   try {
     raw = await req.json();

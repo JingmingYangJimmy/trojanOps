@@ -764,7 +764,7 @@ WP-14.
   role, RLS, the `read_grants` trigger and `agent_runs_meta` migrated; every stub due by H3 merged.
 - **WP-1** · A · H2–5 · WP-0 · `src/lib/db/**`, `db/migrations/**`, `tests/rls.test.ts` ·
   `withActor` and the RLS migration proven: the §10 contract passes as `trojanops_app`.
-- **WP-3** · A · H5–7 · WP-1 · `src/lib/{identity,authz}/**`, `src/app/page.tsx`,
+- **WP-3** · A · H5–7 · WP-1 · `src/lib/{identity,authz}/**`, `src/app/{page.tsx,persona-picker.tsx}`,
   `src/app/api/session/**`, `tests/grants.test.ts` · persona identity, active org, `grantsFor`,
   `capGrants`; Morgan and public-cap tests.
 - **WP-4** · A · H7–11 · WP-3, B `effectiveAgent`/`canUse`, C `listAccessibleDocuments` ·
