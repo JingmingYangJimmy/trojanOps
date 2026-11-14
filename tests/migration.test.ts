@@ -1,7 +1,7 @@
-// Owner: A. The roles/RLS migration (db/migrations/0001_roles_rls.sql) as seen by trojanops_app.
-// WP-1 adds the §10 visibility contract in tests/rls.test.ts.
+// Owner: A. The roles/RLS migration (db/migrations/0001_roles_rls.sql) as seen by trojanops_app, with
+// raw set_config. tests/rls.test.ts checks the same policies through withActor.
 import { afterAll, describe, expect, it } from 'vitest';
-import { ORG, SOURCE, USER } from '@db/seed/ids';
+import { ORG, SOURCE } from '@db/seed/ids';
 import { appSql, rolledBack } from './db';
 
 const sql = await appSql();
@@ -19,8 +19,20 @@ describe.skipIf(!sql)('roles and RLS migration', () => {
   });
 
   it('shows no documents without set_config', async () => {
-    const [r] = await db`select count(*)::int as n from documents`;
-    expect(r.n).toBe(0);
+    await rolledBack(db, async (tx) => {
+      await tx`insert into sources (id, org_id, slug, name, kind, created_at)
+               values (${SOURCE.startup.public}, ${ORG.startup}, 'public', 'Public', 'public', now())
+               on conflict do nothing`;
+      await set(tx, 'app.manage_org', ORG.startup);
+      await tx`insert into documents (org_id, source_id, title, tier, body_md, created_at)
+               values (${ORG.startup}, ${SOURCE.startup.public}, 'FAQ', 'public', 'x', now())`;
+      await set(tx, 'app.manage_org', '');
+      expect((await tx`select count(*)::int as n from documents`)[0].n).toBe(0);
+      // Control: the row is there once grants and sources are set.
+      await set(tx, 'app.grants', '{"*"}');
+      await set(tx, 'app.agent_sources', `{"${SOURCE.startup.public}"}`);
+      expect((await tx`select count(*)::int as n from documents`)[0].n).toBeGreaterThan(0);
+    });
   });
 
   it('keeps audit_events and ai_usage append-only and agent_runs_meta read-only', async () => {
@@ -73,9 +85,4 @@ describe.skipIf(!sql)('roles and RLS migration', () => {
     });
   });
 
-  it('lets a user read only their own runs', async () => {
-    const [r] = await db`select count(*)::int as n from agent_runs`;
-    expect(r.n).toBe(0);
-    void USER;
-  });
 });
