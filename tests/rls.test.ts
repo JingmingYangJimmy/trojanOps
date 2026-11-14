@@ -12,14 +12,13 @@ import { getDb, type Tx } from '@/lib/db/client';
 import { withActor } from '@/lib/db/with-actor';
 import { DOCUMENT, ORG, SOURCE, USER } from '@db/seed/ids';
 import {
-  actorFor, appSql, ensureDocumentFixture, ensureHandoffInstallation, inRolledBackApp, pgError, ts,
+  actorFor, appSql, closeAppDb, ensureDocumentFixture, ensureHandoffInstallation, inRolledBackApp, pgError, ts,
 } from './db';
 
 const probe = await appSql();
 await probe?.end();
 afterAll(async () => {
-  // drizzle() keeps the postgres-js pool on $client; Db's type omits it.
-  if (probe) await (getDb() as unknown as { $client: { end: (o: { timeout: number }) => Promise<void> } }).$client.end({ timeout: 1 });
+  if (probe) await closeAppDb();
 });
 
 interface Agent { orgId: string; maxTier: Tier; sourceIds: string[] }

@@ -24,6 +24,12 @@ export async function appSql(): Promise<postgres.Sql | null> {
   }
 }
 
+/** Ends the app's getDb() pool, for a suite's afterAll. drizzle() keeps the postgres-js pool on
+ * $client; Db's type omits it. */
+export async function closeAppDb(): Promise<void> {
+  await (getDb() as unknown as { $client: { end: (o: { timeout: number }) => Promise<void> } }).$client.end({ timeout: 1 });
+}
+
 /** Runs fn in a transaction that is always rolled back. */
 export async function rolledBack(sql: postgres.Sql, fn: (tx: postgres.TransactionSql) => Promise<void>): Promise<void> {
   const rollback = new Error('rollback');
