@@ -59,8 +59,8 @@ agent runtime; real agents (model, retrieval, tools) are built last.
 - An API route under `src/app/api/**` belongs to the stream that owns the service it calls
   (`docs/architecture.md` §14).
 - `tests/<area>.test.ts` belongs to the stream that owns the module it covers.
-- Shared docs (`docs/**`, `AGENTS.md`, `CLAUDE.md`): any stream may edit them, in the same PR as
-  the change they describe.
+- Shared docs (`README.md`, `docs/**`, `AGENTS.md`, `CLAUDE.md`): any stream may edit them, in the
+  same PR as the change they describe.
 
 ## Interfaces between streams
 
