@@ -1,0 +1,51 @@
+# Stream A: Platform core
+
+**Owner:** TBD. You hold the contracts, the database and the gateway that every run passes through.
+Your paths are in `AGENTS.md`.
+
+## Work packages
+
+| WP | Hours | Done when (full text: `docs/architecture.md` §16) |
+|---|---|---|
+| WP-0 (lead) | H0–2 | Repo runs; contracts and every schema file frozen with the area owners |
+| WP-1 | H2–5 | Tables, RLS, the `read_grants` trigger and `withActor`; the §10 visibility contract passes as `trojanops_app` |
+| WP-3 | H5–7 | Persona identity, active org, `grantsFor`, `capGrants`; Morgan and public-cap tests |
+| WP-4 | H7–11 | `runAgent` §7 steps 1–3 and 5–8 on the mock runtime with the audit writer by H9; quota and billing by H11 |
+| WP-13 | H12–14, to H16 if time | Floor: `recruiting-qa` answers through one model call with its accessible documents |
+
+## You provide
+
+Stubs by H3, at their real paths.
+
+| Interface | Real by |
+|---|---|
+| `contracts.ts`, schema, migrations | H2 |
+| `withActor`, `clock.now()` | H5 |
+| `getActor`, `grantsFor`, `capGrants` | H7 |
+| `audit()`, `gateway.runAgent()` | H9 |
+| `quota.setLimit`, `quota.remaining` | H11 |
+
+## You consume
+
+- B `effectiveAgent`, `canUse`: real at H6.
+- C `listAccessibleDocuments`: real at H5.
+
+## Demo beats
+
+- D5 (quota block): with B's admin page.
+- D8: the audit writer behind every beat.
+- The mock runtime behind every run.
+
+## Watch for
+
+- RLS is silently bypassed by the owner role, by `SET` without `LOCAL`, and by `RETURNING` on RLS
+  tables (§5).
+- `pnpm db:reset` must work twice in a row.
+- The mock costs a flat $0.01; a limit of 0 always blocks.
+- You are the only one who generates migrations.
+
+## First prompt
+
+> Read `AGENTS.md`, `docs/architecture.md` §2, §5–§7 and §16, and `docs/streams/a-platform.md`.
+> Plan WP-1: tables, the RLS migration, the `read_grants` trigger, `withActor`, and
+> `tests/rls.test.ts` for the §10 contract. Edit only stream A paths. Show me the plan first.

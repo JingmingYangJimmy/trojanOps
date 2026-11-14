@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+coverage/
+*.log
+.DS_Store
+
+.env
+.env.local
+.env.*.local
+
+.idea/
+.vscode/
+.vercel/
+
+.claude/settings.local.json
