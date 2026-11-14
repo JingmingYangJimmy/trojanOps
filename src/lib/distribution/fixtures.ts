@@ -40,7 +40,7 @@ const fundingPrecheck = (installationId: string, orgId: string, financeSourceId:
   rulePack: usgFundingV1,
 });
 
-export const FIXTURE_AGENTS: Record<string, EffectiveAgent> = {
+const initialAgents = (): Record<string, EffectiveAgent> => ({
   [INSTALLATION.startupFundingPrecheck]: fundingPrecheck(INSTALLATION.startupFundingPrecheck, ORG.startup, SOURCE.startup.finance),
   [INSTALLATION.archeryFundingPrecheck]: fundingPrecheck(INSTALLATION.archeryFundingPrecheck, ORG.archery, SOURCE.archery.finance),
   [INSTALLATION.danceFundingPrecheck]: fundingPrecheck(INSTALLATION.danceFundingPrecheck, ORG.dance, SOURCE.dance.finance),
@@ -108,4 +108,16 @@ export const FIXTURE_AGENTS: Record<string, EffectiveAgent> = {
     modelClass: 'standard',
     systemPrompt: 'You help USG reviewers apply the funding rules.',
   },
-};
+});
+
+// On globalThis so a publish from a route handler shows on pages (separate module instances).
+const store = globalThis as unknown as { trojanopsAgentsStub?: Record<string, EffectiveAgent> };
+export const FIXTURE_AGENTS: Record<string, EffectiveAgent> = (store.trojanopsAgentsStub ??= initialAgents());
+
+/** Tests only: undo in-memory publishes. */
+export function resetDistributionFixtures(): void {
+  store.trojanopsAgentsStub = initialAgents();
+  Object.keys(FIXTURE_AGENTS).forEach((k) => delete FIXTURE_AGENTS[k]);
+  Object.assign(FIXTURE_AGENTS, store.trojanopsAgentsStub);
+  store.trojanopsAgentsStub = FIXTURE_AGENTS;
+}

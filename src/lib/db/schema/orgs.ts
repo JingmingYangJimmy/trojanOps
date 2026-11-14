@@ -50,11 +50,12 @@ export const memberships = pgTable('memberships', {
   createdAt: createdAt(),
 }, (t) => [check('memberships_source_check', sql`${t.source} in ('roster', 'manual')`)]);
 
-// The last imported holder of each position (§13 precedence).
+// The holders of each position as last imported from the roster (§13 precedence). Several rows per
+// position when it has several holders (e.g. member).
 export const rosterState = pgTable('roster_state', {
   orgId: uuid('org_id').notNull().references(() => orgs.id),
   positionSlug: text('position_slug').notNull(),
   externalUserId: text('external_user_id').notNull(),
   importedAt: ts('imported_at').notNull(),
   createdAt: createdAt(),
-}, (t) => [primaryKey({ columns: [t.orgId, t.positionSlug] })]);
+}, (t) => [primaryKey({ columns: [t.orgId, t.positionSlug, t.externalUserId] })]);

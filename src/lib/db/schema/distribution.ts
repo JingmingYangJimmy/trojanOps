@@ -45,6 +45,7 @@ export const agentTemplateVersions = pgTable('agent_template_versions', {
   unique('agent_template_versions_template_version_unique').on(t.templateId, t.version),
   check('agent_template_versions_audience_check', sql`${t.audience} in ('public', 'members', 'positions')`),
   check('agent_template_versions_max_tier_check', sql`${t.maxTier} in ('public', 'members', 'officers', 'usg_internal')`),
+  check('agent_template_versions_default_model_class_check', sql`${t.defaultModelClass} in ('standard', 'economy')`),
 ]);
 
 // Null override columns mean "use the template version's value".
@@ -66,6 +67,8 @@ export const agentInstallations = pgTable('agent_installations', {
 }, (t) => [
   unique('agent_installations_template_org_unique').on(t.templateId, t.orgId),
   check('agent_installations_track_check', sql`${t.track} in ('latest', 'pinned')`),
+  check('agent_installations_audience_check', sql`${t.audience} is null or ${t.audience} in ('public', 'members', 'positions')`),
+  check('agent_installations_model_class_check', sql`${t.modelClass} is null or ${t.modelClass} in ('standard', 'economy')`),
 ]);
 
 export const rulePacks = pgTable('rule_packs', {

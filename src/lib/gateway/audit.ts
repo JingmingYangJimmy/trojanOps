@@ -3,7 +3,9 @@
 import type { Actor, AuditAction, AuditEntry, AuditEvent } from '../contracts';
 import { now } from '../clock';
 
-const events: AuditEntry[] = [];
+// On globalThis so route handlers and pages share the stub log.
+const store = globalThis as unknown as { trojanopsAuditStub?: AuditEntry[] };
+const events: AuditEntry[] = (store.trojanopsAuditStub ??= []);
 
 /** Writes one audit row and returns its id. */
 export async function audit(action: AuditAction, event: AuditEvent): Promise<number> {

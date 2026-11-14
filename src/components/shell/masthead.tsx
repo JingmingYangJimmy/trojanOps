@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { getActor } from '@/lib/identity';
 import { myAgents } from '@/lib/distribution';
+import { ORG } from '@db/seed/ids';
 import { ScopeLinks, type Scope } from './scope-links';
 
 export async function Masthead() {
@@ -11,8 +12,8 @@ export async function Masthead() {
   const scopes: Scope[] = [
     { href: '/me/agents', label: 'My agents', match: '/me' },
     { href: '/directory', label: 'Directory', match: '/directory' },
-    ...(club && club.orgName !== 'USG' ? [{ href: `/org/${club.orgId}`, label: `Club: ${club.orgName}`, match: '/org' }] : []),
-    ...(club?.orgName === 'USG' ? [{ href: '/usg/templates', label: 'USG admin', match: '/usg' }] : []),
+    ...(club && club.orgId !== ORG.usg ? [{ href: `/org/${club.orgId}`, label: `Club: ${club.orgName}`, match: '/org' }] : []),
+    ...(actor.activeOrgId === ORG.usg ? [{ href: '/usg/templates', label: 'USG admin', match: '/usg' }] : []),
   ];
   return (
     <header className="flex h-12 items-stretch bg-primary text-primary-foreground">

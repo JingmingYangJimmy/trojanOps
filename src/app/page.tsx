@@ -7,7 +7,7 @@ export default async function Home() {
   const actor = await getActor();
   return (
     <>
-      <PageHeader title="Choose a persona" description="Demo identities. The persona switcher arrives with WP-3; until then you act as Sam." />
+      <PageHeader title="Choose a persona" description="Demo identities. Until the persona switcher is ready, you act as Sam." />
       <table className="w-full max-w-2xl border border-border">
         <thead className="bg-muted text-left">
           <tr><th className="h-10 px-3 font-semibold">Persona</th><th className="px-3 font-semibold">Role</th></tr>

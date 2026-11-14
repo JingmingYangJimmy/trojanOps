@@ -1,6 +1,6 @@
 {
-  "id": "017f17e7-3219-41fd-a795-7fb291c91fc0",
-  "prevId": "a4b2675c-38ff-4d58-94eb-ecd7a0874dc3",
+  "id": "ff3d2dd8-abe0-48e6-8908-161d20b1331c",
+  "prevId": "0af5d0f4-c418-4320-acc2-a785a08c1e30",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -358,11 +358,12 @@
         }
       },
       "compositePrimaryKeys": {
-        "roster_state_org_id_position_slug_pk": {
-          "name": "roster_state_org_id_position_slug_pk",
+        "roster_state_org_id_position_slug_external_user_id_pk": {
+          "name": "roster_state_org_id_position_slug_external_user_id_pk",
           "columns": [
             "org_id",
-            "position_slug"
+            "position_slug",
+            "external_user_id"
           ]
         }
       },
@@ -513,19 +514,6 @@
           "onUpdate": "no action",
           "onDelete": "no action"
         },
-        "documents_source_id_sources_id_fk": {
-          "name": "documents_source_id_sources_id_fk",
-          "tableFrom": "documents",
-          "columnsFrom": [
-            "source_id"
-          ],
-          "tableTo": "sources",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        },
         "documents_uploaded_by_users_id_fk": {
           "name": "documents_uploaded_by_users_id_fk",
           "tableFrom": "documents",
@@ -535,6 +523,21 @@
           "tableTo": "users",
           "columnsTo": [
             "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "documents_source_org_fk": {
+          "name": "documents_source_org_fk",
+          "tableFrom": "documents",
+          "columnsFrom": [
+            "source_id",
+            "org_id"
+          ],
+          "tableTo": "sources",
+          "columnsTo": [
+            "id",
+            "org_id"
           ],
           "onUpdate": "no action",
           "onDelete": "no action"
@@ -616,6 +619,14 @@
           "columns": [
             "org_id",
             "slug"
+          ],
+          "nullsNotDistinct": false
+        },
+        "sources_id_org_unique": {
+          "name": "sources_id_org_unique",
+          "columns": [
+            "id",
+            "org_id"
           ],
           "nullsNotDistinct": false
         }
@@ -781,6 +792,14 @@
         "agent_installations_track_check": {
           "name": "agent_installations_track_check",
           "value": "\"agent_installations\".\"track\" in ('latest', 'pinned')"
+        },
+        "agent_installations_audience_check": {
+          "name": "agent_installations_audience_check",
+          "value": "\"agent_installations\".\"audience\" is null or \"agent_installations\".\"audience\" in ('public', 'members', 'positions')"
+        },
+        "agent_installations_model_class_check": {
+          "name": "agent_installations_model_class_check",
+          "value": "\"agent_installations\".\"model_class\" is null or \"agent_installations\".\"model_class\" in ('standard', 'economy')"
         }
       },
       "isRLSEnabled": false
@@ -946,6 +965,10 @@
         "agent_template_versions_max_tier_check": {
           "name": "agent_template_versions_max_tier_check",
           "value": "\"agent_template_versions\".\"max_tier\" in ('public', 'members', 'officers', 'usg_internal')"
+        },
+        "agent_template_versions_default_model_class_check": {
+          "name": "agent_template_versions_default_model_class_check",
+          "value": "\"agent_template_versions\".\"default_model_class\" in ('standard', 'economy')"
         }
       },
       "isRLSEnabled": false

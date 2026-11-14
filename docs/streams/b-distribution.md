@@ -26,6 +26,7 @@ Stubs by H3.
 
 - A: `getActor`, `grantsFor` (real H7) and `quota.*` (real H11).
 - A: `audit()` (real H9).
+- C: `listLibraryDocuments()` (real H6), for the club home's recent documents.
 
 ## Demo beats
 

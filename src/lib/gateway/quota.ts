@@ -5,7 +5,9 @@ import { INSTALLATION, ORG, USER } from '@db/seed/ids';
 
 const key = (t: QuotaTarget) => [t.scope, t.orgId ?? '', t.userId ?? '', t.installationId ?? ''].join('|');
 
-const limits = new Map<string, number>([
+// On globalThis so route handlers and pages share the stub state.
+const store = globalThis as unknown as { trojanopsQuotaStub?: { limits: Map<string, number>; spent: Map<string, number> } };
+const initialLimits = () => new Map<string, number>([
   [key({ scope: 'platform' }), 50_000_000],
   ...[ORG.startup, ORG.archery, ORG.dance].map((orgId) => [key({ scope: 'org', orgId }), 5_000_000] as [string, number]),
   [key({ scope: 'member', orgId: ORG.startup, userId: USER.casey }), 500_000],
@@ -13,7 +15,11 @@ const limits = new Map<string, number>([
   [key({ scope: 'installation', orgId: ORG.startup, installationId: INSTALLATION.startupRecruitingQa }), 2_500_000],
 ]);
 
-const spent = new Map<string, number>([[key({ scope: 'student_daily', userId: USER.lee }), 40_000]]);
+store.trojanopsQuotaStub ??= {
+  limits: initialLimits(),
+  spent: new Map<string, number>([[key({ scope: 'student_daily', userId: USER.lee }), 40_000]]),
+};
+const { limits, spent } = store.trojanopsQuotaStub;
 
 /** Sets a limit; a child above its parent is a clamp_violation naming the parent (§11). */
 export async function setLimit(actor: Actor, input: QuotaTarget & { limitMicro: number }): Promise<void> {

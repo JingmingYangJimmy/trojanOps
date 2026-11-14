@@ -119,6 +119,7 @@ The letter after each path is the owning stream (`AGENTS.md`). An API route unde
 ```text
 src/lib/
   contracts.ts, clock.ts, api.ts (route helper)                            A
+  runtime/       index.ts (AGENT_RUNTIME), mock.ts                          A
   utils.ts (shadcn cn)                                                      D
   db/            client.ts (app role), with-actor.ts                        A
   db/schema/     index.ts, columns.ts, orgs.ts, runs.ts, quota.ts, audit.ts A
@@ -132,6 +133,7 @@ src/lib/
                  import.ts                                                  D
   documents/     library.ts, access.ts (listAccessibleDocuments, explainAccess), preview.ts   C
   connectors/    registry.ts + one folder per kind, each with mock.ts       D
+                 llm/**                                                     A
 src/components/  ui/ (shadcn, restyled), shell/ (masthead, side nav, footer)   D
                  inspector/                                                 C
 src/app/         layout.tsx, globals.css, fonts.ts                          D
@@ -144,6 +146,7 @@ db/seed/         ids.ts: fixed seed ids, shared and append-only
                  quota.ts                                                   A
 rules/packs/     usg-funding.v1.json                                        B
 tests/           <area>.test.ts, owned by the stream of the module it covers
+                 db.ts: app-role helpers; DB suites skip when the DB is down  A
 scripts/         db-reset.ts (owner URL), check.sh                          A
 ```
 
@@ -161,12 +164,12 @@ Every id is `uuid default gen_random_uuid()`; every table has `created_at` writt
 - `users(id, external_id text unique, display_name text, demo_email text)`
 - `positions(id, org_id → orgs, slug text, name text, is_officer bool, unique (org_id, slug))`
 - `memberships(id, user_id, org_id, position_id, source text check (source in ('roster','manual')), started_at, ended_at null)`; active = `ended_at is null`
-- `roster_state(org_id, position_slug, external_user_id, imported_at, primary key (org_id, position_slug))`: the last imported holder of each position (§13)
+- `roster_state(org_id, position_slug, external_user_id, imported_at, primary key (org_id, position_slug, external_user_id))`: the holders of each position as last imported (§13); several rows for a position with several holders, such as `member`
 
 ### Documents (C)
 
-- `sources(id, org_id, slug, name, kind text check (kind in ('public','minutes','finance','archive','rulebook','usg_internal')))`
-- `documents(id, org_id, source_id, title, tier text check (tier in ('public','members','officers','usg_internal')), allowed_positions text[], read_grants text[], version int, body_md text, uploaded_by)`
+- `sources(id, org_id, slug, name, kind text check (kind in ('public','minutes','finance','archive','rulebook','usg_internal')), unique (org_id, slug), unique (id, org_id))`
+- `documents(id, org_id, source_id, title, tier text check (tier in ('public','members','officers','usg_internal')), allowed_positions text[], read_grants text[], version int, body_md text, uploaded_by, foreign key (source_id, org_id) → sources(id, org_id))`: a document's source belongs to its org, so a president can't plant documents in another org's source
   - A trigger sets `read_grants` from `tier` and `allowed_positions` on every insert and update; for
     `officers` it always includes `<orgId>:president`. Code never writes `read_grants`.
 
@@ -245,9 +248,12 @@ create policy runs_own on agent_runs for all to trojanops_app
   - creates the `documents_read_grants` trigger (`before insert or update`) from the grants table
     above;
   - creates the view `agent_runs_meta`. It runs with its owner's rights, so it lists every run;
-    services filter it by org.
+    services filter it by org. Because a simple view is updatable as its owner, the migration
+    revokes insert and update on it; revoke them on any future view too.
 - `audit_events.ts` is that table's `created_at`.
 - `withActor` sets `app.manage_org` to the active org only when the actor is its president.
+- An `UPDATE ... WHERE` on `documents` must also pass `documents_read`, so the library sets
+  `app.grants` and `app.agent_sources` before updating.
 - Agent runs set `app.agent_sources` to the agent's sources. The document library sets it to all
   sources of the active org plus USG public sources.
 - `pnpm db:reset` drops the `public` and `drizzle` schemas; the role survives and the `do` block
@@ -297,6 +303,17 @@ export type CanUseResult =
 export type CanUse = (userId: string, agent: EffectiveAgent) => Promise<CanUseResult>;
 
 export interface AccessibleDocument { id: string; title: string; tier: Tier; bodyMd: string }
+
+// The document library (C → B club home): documents the actor can read in one club.
+export interface LibraryDocument {
+  id: string;
+  title: string;
+  tier: Tier;
+  sourceId: string;
+  sourceName: string;
+  version: number;
+  createdAt: Date;
+}
 
 export interface AgentRuntime {
   run(agent: EffectiveAgent, actor: Actor, input: string, ctx: {
@@ -470,8 +487,8 @@ export interface LLMProvider {              // used by the real runtime (WP-13)
    level; a limit of 0 always blocks. Levels: platform; billed club (`agent.orgId`); installation;
    member, when the user is an active member of the billed club; `student_daily`, for every
    public-agent run. Blocked → `quota.blocked`, 429 `quota_exceeded` with `cap`; runtime not called.
-5. `accessibleDocuments = listAccessibleDocuments(runGrants, agent.sourceIds)` (C, via `withActor`);
-   `audit('run.access', {documentIds})`.
+5. `accessibleDocuments = listAccessibleDocuments(actor, runGrants, agent.sourceIds)` (C, via
+   `withActor`); `audit('run.access', {documentIds})`.
 6. `runtime.run(agent, actor, input, {runId, accessibleDocuments})`.
 7. `proposedActions`: write tools become `pending_actions`, confirmed on the run page; read and
    draft tools run through `gateway.tool()` once real agents exist.
@@ -563,8 +580,10 @@ Seeded templates (display names in UI copy):
 
 - **Upload** (`documents/library.ts`): only the club president (`app.manage_org`). Choose source,
   tier and, for `officers`, positions. The trigger computes `read_grants`. `audit('document.upload')`.
-- **`listAccessibleDocuments(runGrants, sourceIds)`** (`documents/access.ts`): the RLS query used by
-  the gateway's step 5.
+- **`listAccessibleDocuments(actor, runGrants, sourceIds)`** (`documents/access.ts`): the RLS query
+  used by the gateway's step 5, run as `withActor(actor, {grants: runGrants, sourceIds})`.
+- **`listLibraryDocuments(actor, orgId)`** (`documents/library.ts`): the club library and the club
+  home's recent documents.
 - **`explainAccess(subjectGrants, agent, doc)`**: a pure function returning an `AccessCell`:
   1. `outside_sources` when the doc's source isn't the agent's;
   2. `above_max_tier` when the doc's tier is above the agent's max tier;
@@ -635,8 +654,10 @@ viewer's RLS; unreadable ones render as "Restricted document".
 - **Precedence:** a roster row changes a position only when it differs from `roster_state` for that
   position. A manual transfer therefore holds until the roster itself changes that position.
   - Test: a sync right after a manual transfer changes nothing.
-- **`roster.csv`** mirrors the seed for existing clubs and adds one new club (Robotics Club).
-- **`transferPosition(orgId, slug, toUserId)`:** end the old membership row and insert the new one
+- **`roster.csv`** mirrors the seed for existing clubs and adds one new club (Robotics Club). The
+  seed (`db/seed/personas.ts`, D) writes `roster_state` to match, so the first sync changes nothing
+  in existing clubs.
+- **`transferPosition(actor, orgId, slug, toUserId)`:** end the old membership row and insert the new one
   (`source = 'manual'`) in one transaction. `audit('position.transfer')`.
 - **Cohorts** are seeded; editing them is P1.
 - **Inactive clubs:** installations disabled; documents and audit kept.
@@ -717,7 +738,8 @@ Pages (18):
 | Archery | `finance` | Archery budget 2026 | officers: treasurer (+ president) |
 | Dance | `public` | Spring showcase info | public |
 
-**Rule pack** `usg-funding` v1 (`label: "Demo rule pack"`):
+**Rule pack** `usg-funding` v1 (`label: "Demo rule pack"`; `content` keys `annualCapUsd`,
+`fundedEventsPerSemester`, `vendorLeadTimeInstructionalWeeks`, `deadline`):
 - annual cap $8,000;
 - 4 funded events per semester;
 - 6 instructional weeks' lead time for approved vendors;

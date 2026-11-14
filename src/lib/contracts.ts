@@ -41,6 +41,17 @@ export type CanUse = (userId: string, agent: EffectiveAgent) => Promise<CanUseRe
 
 export interface AccessibleDocument { id: string; title: string; tier: Tier; bodyMd: string }
 
+// The document library (C → B club home): documents the actor can read in one club.
+export interface LibraryDocument {
+  id: string;
+  title: string;
+  tier: Tier;
+  sourceId: string;
+  sourceName: string;
+  version: number;
+  createdAt: Date;
+}
+
 export interface AgentRuntime {
   run(agent: EffectiveAgent, actor: Actor, input: string, ctx: {
     runId: string;

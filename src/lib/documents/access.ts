@@ -1,11 +1,16 @@
 // Owner: C (WP-8). listAccessibleDocuments is a STUB that filters fixtures the way the RLS policy
 // does (real by H5, inside withActor). explainAccess is the §10 rule and stays pure.
-import type { AccessCell, AccessibleDocument, EffectiveAgent, Grant, Tier } from '../contracts';
+import type { AccessCell, AccessibleDocument, Actor, EffectiveAgent, Grant, Tier } from '../contracts';
 import { FIXTURE_DOCUMENTS } from './fixtures';
 
 /** The documents a run may read: read_grants overlap runGrants and the source is one of the agent's
- * (gateway step 5). */
-export async function listAccessibleDocuments(runGrants: Grant[], sourceIds: string[]): Promise<AccessibleDocument[]> {
+ * (gateway step 5). Real version: withActor(actor, { grants: runGrants, sourceIds }, …). */
+export async function listAccessibleDocuments(
+  actor: Actor,
+  runGrants: Grant[],
+  sourceIds: string[],
+): Promise<AccessibleDocument[]> {
+  void actor;
   return FIXTURE_DOCUMENTS
     .filter((d) => sourceIds.includes(d.sourceId) && d.readGrants.some((g) => runGrants.includes(g as Grant)))
     .map(({ id, title, tier, bodyMd }) => ({ id, title, tier, bodyMd }));

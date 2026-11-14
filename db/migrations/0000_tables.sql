@@ -45,7 +45,7 @@ CREATE TABLE "roster_state" (
 	"external_user_id" text NOT NULL,
 	"imported_at" timestamp with time zone NOT NULL,
 	"created_at" timestamp with time zone NOT NULL,
-	CONSTRAINT "roster_state_org_id_position_slug_pk" PRIMARY KEY("org_id","position_slug")
+	CONSTRAINT "roster_state_org_id_position_slug_external_user_id_pk" PRIMARY KEY("org_id","position_slug","external_user_id")
 );
 --> statement-breakpoint
 CREATE TABLE "users" (
@@ -80,6 +80,7 @@ CREATE TABLE "sources" (
 	"kind" text NOT NULL,
 	"created_at" timestamp with time zone NOT NULL,
 	CONSTRAINT "sources_org_slug_unique" UNIQUE("org_id","slug"),
+	CONSTRAINT "sources_id_org_unique" UNIQUE("id","org_id"),
 	CONSTRAINT "sources_kind_check" CHECK ("sources"."kind" in ('public', 'minutes', 'finance', 'archive', 'rulebook', 'usg_internal'))
 );
 --> statement-breakpoint
@@ -99,7 +100,9 @@ CREATE TABLE "agent_installations" (
 	"installed_at" timestamp with time zone NOT NULL,
 	"created_at" timestamp with time zone NOT NULL,
 	CONSTRAINT "agent_installations_template_org_unique" UNIQUE("template_id","org_id"),
-	CONSTRAINT "agent_installations_track_check" CHECK ("agent_installations"."track" in ('latest', 'pinned'))
+	CONSTRAINT "agent_installations_track_check" CHECK ("agent_installations"."track" in ('latest', 'pinned')),
+	CONSTRAINT "agent_installations_audience_check" CHECK ("agent_installations"."audience" is null or "agent_installations"."audience" in ('public', 'members', 'positions')),
+	CONSTRAINT "agent_installations_model_class_check" CHECK ("agent_installations"."model_class" is null or "agent_installations"."model_class" in ('standard', 'economy'))
 );
 --> statement-breakpoint
 CREATE TABLE "agent_template_versions" (
@@ -122,7 +125,8 @@ CREATE TABLE "agent_template_versions" (
 	"created_at" timestamp with time zone NOT NULL,
 	CONSTRAINT "agent_template_versions_template_version_unique" UNIQUE("template_id","version"),
 	CONSTRAINT "agent_template_versions_audience_check" CHECK ("agent_template_versions"."audience" in ('public', 'members', 'positions')),
-	CONSTRAINT "agent_template_versions_max_tier_check" CHECK ("agent_template_versions"."max_tier" in ('public', 'members', 'officers', 'usg_internal'))
+	CONSTRAINT "agent_template_versions_max_tier_check" CHECK ("agent_template_versions"."max_tier" in ('public', 'members', 'officers', 'usg_internal')),
+	CONSTRAINT "agent_template_versions_default_model_class_check" CHECK ("agent_template_versions"."default_model_class" in ('standard', 'economy'))
 );
 --> statement-breakpoint
 CREATE TABLE "agent_templates" (
@@ -254,8 +258,8 @@ ALTER TABLE "org_cohorts" ADD CONSTRAINT "org_cohorts_org_id_orgs_id_fk" FOREIGN
 ALTER TABLE "positions" ADD CONSTRAINT "positions_org_id_orgs_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."orgs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "roster_state" ADD CONSTRAINT "roster_state_org_id_orgs_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."orgs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "documents" ADD CONSTRAINT "documents_org_id_orgs_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."orgs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "documents" ADD CONSTRAINT "documents_source_id_sources_id_fk" FOREIGN KEY ("source_id") REFERENCES "public"."sources"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "documents" ADD CONSTRAINT "documents_uploaded_by_users_id_fk" FOREIGN KEY ("uploaded_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "documents" ADD CONSTRAINT "documents_source_org_fk" FOREIGN KEY ("source_id","org_id") REFERENCES "public"."sources"("id","org_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sources" ADD CONSTRAINT "sources_org_id_orgs_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."orgs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "agent_installations" ADD CONSTRAINT "agent_installations_template_id_agent_templates_id_fk" FOREIGN KEY ("template_id") REFERENCES "public"."agent_templates"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "agent_installations" ADD CONSTRAINT "agent_installations_org_id_orgs_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."orgs"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

@@ -14,6 +14,8 @@ export interface FixtureDocument {
   bodyMd: string;
 }
 
+export const FIXTURE_UPLOADED_AT = new Date('2026-10-08T17:00:00Z');
+
 export const FIXTURE_DOCUMENTS: FixtureDocument[] = [
   {
     id: DOCUMENT.usgFundingRules, orgId: ORG.usg, sourceId: SOURCE.usg.rulebook, sourceName: 'USG rulebook',
@@ -61,6 +63,14 @@ export const FIXTURE_DOCUMENTS: FixtureDocument[] = [
     bodyMd: 'The spring showcase is on April 18 at Bovard Auditorium. Tickets are free for students.',
   },
 ];
+
+// Each club's library shows its own sources plus USG public sources.
+export const FIXTURE_LIBRARY_SOURCES: Record<string, string[]> = {
+  [ORG.usg]: [SOURCE.usg.rulebook, SOURCE.usg.usg_internal],
+  [ORG.startup]: [...Object.values(SOURCE.startup), SOURCE.usg.rulebook],
+  [ORG.archery]: [...Object.values(SOURCE.archery), SOURCE.usg.rulebook],
+  [ORG.dance]: [...Object.values(SOURCE.dance), SOURCE.usg.rulebook],
+};
 
 export const FIXTURE_CLUB_POSITIONS: Record<string, string[]> = {
   [ORG.usg]: ['admin', 'reviewer'],

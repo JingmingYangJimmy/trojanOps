@@ -18,7 +18,7 @@ const money = (micro: number) => `$${(micro / 1_000_000).toFixed(2)}`;
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="border-b border-border py-3">
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
+      <h3 className="mb-2 font-semibold">{title}</h3>
       {children}
     </section>
   );

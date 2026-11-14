@@ -5,15 +5,17 @@
 
 const systemNow = () => Date.now();
 
-let anchor: { demoMs: number; realMs: number } | null = null;
+type Anchor = { demoMs: number; realMs: number };
+// On globalThis so route handlers and pages (separate module instances in Next.js) share one clock.
+const state = globalThis as unknown as { trojanopsClock?: Anchor | null };
 
-function demoAnchor(): { demoMs: number; realMs: number } | null {
-  if (anchor) return anchor;
+function demoAnchor(): Anchor | null {
+  if (state.trojanopsClock) return state.trojanopsClock;
   if (process.env.DEMO_MODE !== '1' || !process.env.DEMO_NOW) return null;
   const demoMs = Date.parse(process.env.DEMO_NOW);
   if (Number.isNaN(demoMs)) throw new Error(`DEMO_NOW is not a valid date: ${process.env.DEMO_NOW}`);
-  anchor = { demoMs, realMs: systemNow() };
-  return anchor;
+  state.trojanopsClock = { demoMs, realMs: systemNow() };
+  return state.trojanopsClock;
 }
 
 export function now(): Date {
@@ -24,12 +26,12 @@ export function now(): Date {
 /** Demo only: jump the clock to `date`; it keeps running from there. */
 export function setDemoNow(date: Date): void {
   if (process.env.DEMO_MODE !== '1') throw new Error('setDemoNow needs DEMO_MODE=1');
-  anchor = { demoMs: date.getTime(), realMs: systemNow() };
+  state.trojanopsClock = { demoMs: date.getTime(), realMs: systemNow() };
 }
 
 /** Tests only: forget the anchor so the next now() re-reads DEMO_NOW. */
 export function resetClockForTests(): void {
-  anchor = null;
+  state.trojanopsClock = null;
 }
 
 export const clock = { now, setDemoNow };

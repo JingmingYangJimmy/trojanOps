@@ -1,4 +1,4 @@
-// Owner: D (adapter); the real provider is chosen in WP-13. Vendor SDKs are imported only under
+// Owner: A (WP-13 picks the real provider). Vendor SDKs are imported only under
 // src/lib/connectors/llm/ (I5). The mock runtime never calls this.
 import type { LLMProvider } from '../../contracts';
 

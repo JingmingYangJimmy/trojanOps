@@ -84,6 +84,9 @@ create policy runs_own on agent_runs for all to trojanops_app
 
 -- Run metadata for club and USG pages (I15). The view runs with its owner's rights, so it lists every
 -- run; services filter by org. It never exposes input or output.
+-- TODO(verify): this relies on the owner bypassing RLS (superuser locally). On a hosted Postgres whose
+-- owner is not a superuser, FORCE RLS would make it return only the caller's runs; give the view an
+-- owner role with BYPASSRLS there (§19 deploy target).
 create view agent_runs_meta as
   select id, installation_id, template_version, rule_pack_version, org_id, billed_org_id, user_id,
          accessible_document_ids, cited_document_ids, model, cost_micro, status, started_at,
@@ -91,3 +94,7 @@ create view agent_runs_meta as
   from agent_runs;
 --> statement-breakpoint
 grant select on agent_runs_meta to trojanops_app;
+--> statement-breakpoint
+-- The default privileges above granted insert and update on the view too; a simple view is
+-- updatable and runs as its owner, so writing through it would bypass runs_own. Read-only.
+revoke insert, update, delete on agent_runs_meta from trojanops_app;

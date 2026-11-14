@@ -52,10 +52,10 @@ agent runtime; real agents (model, retrieval, tools) are built last.
 
 | Stream | Owner | Owns | Work packages |
 |---|---|---|---|
-| A Platform core | TBD | `src/lib/{contracts.ts,clock.ts,api.ts}`, `src/lib/{db,identity,authz,gateway,runtime}/**` (schema files `index`, `columns`, `orgs`, `runs`, `quota`, `audit`), `db/migrations/**`, `db/seed/quota.ts`, `src/app/page.tsx`, `scripts/**`, root config (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `tsconfig.json`, `next.config.*`, `drizzle.config.ts`, `vitest.config.ts`, `eslint.config.mjs`, `postcss.config.mjs`, `components.json`, `docker-compose.yml`, `.env.example`) | WP-0 (lead), 1, 3, 4, 13 |
+| A Platform core | TBD | `src/lib/{contracts.ts,clock.ts,api.ts}`, `src/lib/{db,identity,authz,gateway,runtime}/**` (schema files `index`, `columns`, `orgs`, `runs`, `quota`, `audit`), `src/lib/connectors/llm/**`, `tests/db.ts`, `db/migrations/**`, `db/seed/quota.ts`, `src/app/page.tsx`, `scripts/**`, root config (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `tsconfig.json`, `next.config.*`, `drizzle.config.ts`, `vitest.config.ts`, `eslint.config.mjs`, `postcss.config.mjs`, `components.json`, `docker-compose.yml`, `.env.example`) | WP-0 (lead), 1, 3, 4, 13 |
 | B Distribution | TBD | `src/lib/distribution/**`, `src/lib/db/schema/distribution.ts`, `src/lib/lifecycle/transfer.ts`, `src/app/org/[orgId]/{page.tsx,catalog/**,admin/**}`, `src/app/usg/{templates,clubs,rule-packs}/**`, `db/seed/distribution.ts`, `rules/**` | WP-5, 7, 6 |
 | C Documents and permissions | TBD | `src/lib/documents/**`, `src/lib/db/schema/documents.ts`, `src/components/inspector/**`, `src/app/org/[orgId]/{agents,documents,preview,audit}/**`, `src/app/usg/audit/**`, `db/seed/documents.ts`, `db/seed/docs/**` | WP-8, 9, 14 |
-| D Integration and demo | TBD | `src/lib/connectors/**`, `src/lib/utils.ts`, `src/lib/db/schema/connectors.ts`, `src/lib/lifecycle/import.ts`, `src/app/{layout.tsx,globals.css,fonts.ts}`, `src/components/{ui,shell}/**`, `src/app/{me,directory,demo}/**`, `src/app/usg/integrations/**`, `db/seed/{index,orgs,personas}.ts`, `db/seed/roster.csv` | WP-2, 10, 11, 12 |
+| D Integration and demo | TBD | `src/lib/connectors/**` (except `llm/`), `src/lib/utils.ts`, `src/lib/db/schema/connectors.ts`, `src/lib/lifecycle/import.ts`, `src/app/{layout.tsx,globals.css,fonts.ts}`, `src/components/{ui,shell}/**`, `src/app/{me,directory,demo}/**`, `src/app/usg/integrations/**`, `db/seed/{index,orgs,personas}.ts`, `db/seed/roster.csv` | WP-2, 10, 11, 12 |
 
 - An API route under `src/app/api/**` belongs to the stream that owns the service it calls
   (`docs/architecture.md` §14).
@@ -84,6 +84,7 @@ fixture data lives in the owner's `fixtures.ts`; delete it once the function rea
 | `directory()`, `myAgents()`, `provisionOrg()`, `publishToAllStudents()` | `@/lib/distribution` | B | D | H7 |
 | `transferPosition()` | `@/lib/lifecycle/transfer` | B | D (roster import) | H9 |
 | `listAccessibleDocuments()`, `explainAccess()` | `@/lib/documents/access` | C | A (gateway step 5), C | H5 |
+| `listLibraryDocuments()` | `@/lib/documents/library` | C | B (club home) | H6 |
 | `previewAccess()` | `@/lib/documents/preview` | C | C | H10 |
 | `<Inspector />` | `@/components/inspector` | C | D (run pages) | H10 |
 | `getConnectors()`, `listConnectors()`, `RosterSource` | `@/lib/connectors/registry` | D | A, B | H9 |

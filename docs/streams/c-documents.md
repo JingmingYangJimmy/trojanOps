@@ -19,6 +19,7 @@ Stubs by H3.
 | Interface | Real by |
 |---|---|
 | `listAccessibleDocuments()`, `explainAccess()` | H5 |
+| `listLibraryDocuments()` | H6 |
 | `previewAccess()`, `<Inspector />` | H10 |
 
 ## You consume
