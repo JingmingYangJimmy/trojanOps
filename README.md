@@ -134,7 +134,7 @@ flowchart LR
 | `.claude/agents/` | 每条工作流一个子智能体，另有 `ui-designer` 和 `reviewer` |
 | `.github/pull_request_template.md` | PR 模板 |
 
-代码目录在 WP-0 建立，布局见 `docs/architecture.md` §4。团队版架构文档和页面清单在 Claude 文档里，链接在团队群。
+代码目录的布局和每个路径的归属见 `docs/architecture.md` §4。团队版架构文档和页面清单在 Claude 文档里，链接在团队群。
 
 ## 分工
 
@@ -153,6 +153,24 @@ flowchart LR
 | H12 | 冻结平台功能，八个演示步骤在模拟运行时上全部跑通 |
 | H14 | 接入最小的真实智能体；做不到就整场用模拟运行时 |
 | H18 | 完成三次彩排 |
+
+## 本地环境
+
+需要 Node.js 22 以上、pnpm 12 和 Docker Desktop。
+
+```bash
+npm i -g pnpm@12.18.0     # 没有 pnpm 时
+pnpm install
+cp .env.example .env
+pnpm db:up                # 启动 PostgreSQL 17
+pnpm db:reset             # 建表、行级安全、种子数据；可以反复运行
+pnpm dev                  # http://localhost:3000
+pnpm check                # 类型检查、lint、测试、不变量和设计检查
+```
+
+应用以 `trojanops_app` 角色连接数据库，行级安全对它生效。`DATABASE_OWNER_URL` 只给 `pnpm db:reset` 用。
+
+身份切换在 WP-3 完成。在那之前，没有选人物的请求一律按 Sam（Startup Club 主席）处理；要换成别的人物，把 `trojanops_persona` cookie 设成 `db/seed/ids.ts` 里对应的用户 id。
 
 ## 开始工作
 

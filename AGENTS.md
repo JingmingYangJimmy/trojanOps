@@ -44,6 +44,7 @@ agent runtime; real agents (model, retrieval, tools) are built last.
 | `pnpm dev` | Next.js dev server |
 | `pnpm db:up` | `docker compose up -d db` |
 | `pnpm db:reset` | drop, migrate and seed (owner URL, CLI only) |
+| `pnpm db:generate` | `drizzle-kit generate` (stream A only) |
 | `pnpm test` | Vitest, unit + DB integration |
 | `pnpm check` | typecheck, lint, test, invariant greps and design greps |
 
@@ -51,40 +52,55 @@ agent runtime; real agents (model, retrieval, tools) are built last.
 
 | Stream | Owner | Owns | Work packages |
 |---|---|---|---|
-| A Platform core | TBD | `src/lib/{contracts.ts,clock.ts}`, `src/lib/{db,identity,authz,gateway,runtime}/**` (schema files `index`, `orgs`, `runs`, `quota`, `audit`), `db/migrations/**`, `db/seed/quota.ts`, `src/app/page.tsx`, root config (`package.json`, `pnpm-lock.yaml`, `tsconfig.json`, `next.config.*`, `drizzle.config.ts`, `docker-compose.yml`, `.env.example`) | WP-0 (lead), 1, 3, 4, 13 |
+| A Platform core | TBD | `src/lib/{contracts.ts,clock.ts,api.ts}`, `src/lib/{db,identity,authz,gateway,runtime}/**` (schema files `index`, `columns`, `orgs`, `runs`, `quota`, `audit`), `db/migrations/**`, `db/seed/quota.ts`, `src/app/page.tsx`, `scripts/**`, root config (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `tsconfig.json`, `next.config.*`, `drizzle.config.ts`, `vitest.config.ts`, `eslint.config.mjs`, `postcss.config.mjs`, `components.json`, `docker-compose.yml`, `.env.example`) | WP-0 (lead), 1, 3, 4, 13 |
 | B Distribution | TBD | `src/lib/distribution/**`, `src/lib/db/schema/distribution.ts`, `src/lib/lifecycle/transfer.ts`, `src/app/org/[orgId]/{page.tsx,catalog/**,admin/**}`, `src/app/usg/{templates,clubs,rule-packs}/**`, `db/seed/distribution.ts`, `rules/**` | WP-5, 7, 6 |
 | C Documents and permissions | TBD | `src/lib/documents/**`, `src/lib/db/schema/documents.ts`, `src/components/inspector/**`, `src/app/org/[orgId]/{agents,documents,preview,audit}/**`, `src/app/usg/audit/**`, `db/seed/documents.ts`, `db/seed/docs/**` | WP-8, 9, 14 |
-| D Integration and demo | TBD | `src/lib/connectors/**`, `src/lib/db/schema/connectors.ts`, `src/lib/lifecycle/import.ts`, `src/app/{layout.tsx,globals.css,fonts.ts}`, `src/components/{ui,shell}/**`, `src/app/{me,directory,demo}/**`, `src/app/usg/integrations/**`, `db/seed/{index,orgs,personas}.ts`, `db/seed/roster.csv` | WP-2, 10, 11, 12 |
+| D Integration and demo | TBD | `src/lib/connectors/**`, `src/lib/utils.ts`, `src/lib/db/schema/connectors.ts`, `src/lib/lifecycle/import.ts`, `src/app/{layout.tsx,globals.css,fonts.ts}`, `src/components/{ui,shell}/**`, `src/app/{me,directory,demo}/**`, `src/app/usg/integrations/**`, `db/seed/{index,orgs,personas}.ts`, `db/seed/roster.csv` | WP-2, 10, 11, 12 |
 
 - An API route under `src/app/api/**` belongs to the stream that owns the service it calls
   (`docs/architecture.md` §14).
 - `tests/<area>.test.ts` belongs to the stream that owns the module it covers.
+- `db/seed/ids.ts` (fixed seed ids) is shared and append-only: add ids for your area; never change
+  an existing one.
 - Shared docs (`README.md`, `docs/**`, `AGENTS.md`, `CLAUDE.md`): any stream may edit them, in the
   same PR as the change they describe.
 
 ## Interfaces between streams
 
 Every stub is merged by **H3** at its real path, with the same name and signature and fixture data.
-The owner replaces its internals by the "real" hour. Consumers never change their imports.
+The owner replaces its internals by the "real" hour. Consumers never change their imports. Stub
+fixture data lives in the owner's `fixtures.ts`; delete it once the function reads the database.
 
-| Interface | Owner | Used by | Real by |
-|---|---|---|---|
-| `contracts.ts`, `db/schema/*` | A, with each area owner | all | H2 (frozen) |
-| `withActor`, `clock.now()` | A | all | H5 |
-| `getActor()`, `grantsFor`, `capGrants` | A | B, C, D | H7 |
-| `audit()` | A | all | H9 |
-| `gateway.runAgent()` (stub returns a mock `RunResult`) | A | C (agent page), D (directory runs) | H9 |
-| `quota.setLimit`, `quota.remaining` | A | B (club and USG pages) | H11 |
-| `effectiveAgent()`, `canUse()` | B | A, C, D | H6 |
-| `directory()`, `myAgents()`, `provisionOrg()`, `publishToAllStudents()` | B | D | H7 |
-| `transferPosition()` | B | D (roster import) | H9 |
-| `listAccessibleDocuments()`, `explainAccess()` | C | A (gateway step 5), C | H5 |
-| `previewAccess()`, `<Inspector />` | C | D (run pages) | H10 |
-| connector registry, `RosterSource` | D | A, B | H9 |
-| app shell, `src/components/ui/*` | D | all pages | H5 |
+| Interface | Import from | Owner | Used by | Real by |
+|---|---|---|---|---|
+| contracts, schema | `@/lib/contracts`, `@/lib/db/schema` | A, with each area owner | all | H2 (frozen) |
+| `withActor`, `now()` | `@/lib/db/with-actor`, `@/lib/clock` | A | all | H5 |
+| `route()`, `parseBody()` | `@/lib/api` | A | every API route | real |
+| `getActor()`, `grantsFor`, `capGrants`, `grantLabels` | `@/lib/identity`, `@/lib/authz` | A | B, C, D | H7 |
+| `audit()`, `listAudit()` | `@/lib/gateway/audit` | A | all; C (audit views) | H9 |
+| `runAgent()` (mock `RunResult`) | `@/lib/gateway` | A | C (agent page), D (directory runs) | H9 |
+| `setLimit()`, `remaining()` | `@/lib/gateway/quota` | A | B (club and USG pages) | H11 |
+| `effectiveAgent()`, `canUse()` | `@/lib/distribution` | B | A, C, D | H6 |
+| `directory()`, `myAgents()`, `provisionOrg()`, `publishToAllStudents()` | `@/lib/distribution` | B | D | H7 |
+| `transferPosition()` | `@/lib/lifecycle/transfer` | B | D (roster import) | H9 |
+| `listAccessibleDocuments()`, `explainAccess()` | `@/lib/documents/access` | C | A (gateway step 5), C | H5 |
+| `previewAccess()` | `@/lib/documents/preview` | C | C | H10 |
+| `<Inspector />` | `@/components/inspector` | C | D (run pages) | H10 |
+| `getConnectors()`, `listConnectors()`, `RosterSource` | `@/lib/connectors/registry` | D | A, B | H9 |
+| app shell, `src/components/ui/*` | `@/components/shell`, `@/components/ui/*` | D | all pages | H5 |
 
 ## Git
 
 Branch per work-package slice: `<stream>/<wp>-<topic>`, e.g. `b/wp5-distribute`. Rebase on `main`,
 keep PRs small, squash-merge. Commit messages use Conventional Commits with the area as scope:
 `feat(distribution): distribute templates to a cohort`. Details: `docs/workflow.md`.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

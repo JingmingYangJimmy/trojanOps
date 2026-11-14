@@ -118,9 +118,10 @@ The letter after each path is the owning stream (`AGENTS.md`). An API route unde
 
 ```text
 src/lib/
-  contracts.ts, clock.ts                                                    A
+  contracts.ts, clock.ts, api.ts (route helper)                            A
+  utils.ts (shadcn cn)                                                      D
   db/            client.ts (app role), with-actor.ts                        A
-  db/schema/     index.ts, orgs.ts, runs.ts, quota.ts, audit.ts             A
+  db/schema/     index.ts, columns.ts, orgs.ts, runs.ts, quota.ts, audit.ts A
                  distribution.ts                                            B
                  documents.ts                                               C
                  connectors.ts                                              D
@@ -136,13 +137,18 @@ src/components/  ui/ (shadcn, restyled), shell/ (masthead, side nav, footer)   D
 src/app/         layout.tsx, globals.css, fonts.ts                          D
                  pages: the stream named in §14
 db/migrations/   generated only by A
-db/seed/         index.ts, orgs.ts, personas.ts, roster.csv                 D
+db/seed/         ids.ts: fixed seed ids, shared and append-only
+                 index.ts, orgs.ts, personas.ts, roster.csv                 D
                  distribution.ts                                            B
                  documents.ts, docs/*.md                                    C
                  quota.ts                                                   A
 rules/packs/     usg-funding.v1.json                                        B
 tests/           <area>.test.ts, owned by the stream of the module it covers
+scripts/         db-reset.ts (owner URL), check.sh                          A
 ```
+
+Until an interface is real, its stub reads fixtures from the owner's `fixtures.ts` built on
+`db/seed/ids.ts`.
 
 ## 5. Data model and RLS
 
@@ -234,6 +240,13 @@ create policy runs_own on agent_runs for all to trojanops_app
   with check (user_id::text = current_setting('app.user_id', true));
 ```
 
+- The same migration (`0001_roles_rls.sql`) also:
+  - grants the same privileges on future tables through `alter default privileges`;
+  - creates the `documents_read_grants` trigger (`before insert or update`) from the grants table
+    above;
+  - creates the view `agent_runs_meta`. It runs with its owner's rights, so it lists every run;
+    services filter it by org.
+- `audit_events.ts` is that table's `created_at`.
 - `withActor` sets `app.manage_org` to the active org only when the actor is its president.
 - Agent runs set `app.agent_sources` to the agent's sources. The document library sets it to all
   sources of the active org plus USG public sources.
@@ -264,6 +277,7 @@ export interface EffectiveAgent {
   templateSlug: string;
   name: string;
   templateVersion: number;
+  status: 'enabled' | 'disabled' | 'retired';  // gateway step 1 refuses anything but 'enabled'
   purpose: string;
   audience: Audience;
   usableBy: string[];             // position slugs; empty unless audience = 'positions'
@@ -275,14 +289,19 @@ export interface EffectiveAgent {
   rulePack?: { slug: string; version: number; label: string; content: unknown };
 }
 
-// distribution: positions are read in agent.orgId, not in the actor's active org
-export declare function canUse(userId: string, agent: EffectiveAgent):
-  Promise<{ ok: true; reason: 'public' | 'members' | { position: string } } | { ok: false }>;
+// distribution: positions are read in agent.orgId, not in the actor's active org.
+// Implemented in src/lib/distribution/effective-config.ts.
+export type CanUseResult =
+  | { ok: true; reason: 'public' | 'members' | { position: string } }
+  | { ok: false };
+export type CanUse = (userId: string, agent: EffectiveAgent) => Promise<CanUseResult>;
+
+export interface AccessibleDocument { id: string; title: string; tier: Tier; bodyMd: string }
 
 export interface AgentRuntime {
   run(agent: EffectiveAgent, actor: Actor, input: string, ctx: {
     runId: string;
-    accessibleDocuments: Array<{ id: string; title: string; tier: Tier; bodyMd: string }>;
+    accessibleDocuments: AccessibleDocument[];
   }): Promise<AgentResult>;
 }
 
@@ -293,24 +312,26 @@ export interface AgentResult {
   usage: { model: string; inputTokens: number; outputTokens: number; costMicro?: number };
 }
 
+export interface RunInspector {
+  runGrants: Array<{ grant: Grant; label: string }>;      // label e.g. "Startup Club · Treasurer"
+  sources: Array<{ id: string; name: string }>;
+  permitted: Array<{ id: string; title: string; tier: Tier }>;
+  readInRun: Array<{ id: string; title: string }>;        // cited documents
+  blocked?: Array<{ id: string; title: string | null; reason: AccessCell }>;  // only when the viewer manages the club; null title = "Restricted document"
+  templateVersion: number;
+  rulePack?: { label: string; version: number };
+  billedClub: string;
+  costMicro: number;
+  quotaRemainingMicro: Record<string, number>;
+  auditEventId: number;
+}
+
 export interface RunResult {
   runId: string;
   reply: string;
   citations: Array<{ documentId: string; quote: string }>;
   pendingActions: Array<{ id: string; tool: string }>;
-  inspector: {
-    runGrants: Array<{ grant: Grant; label: string }>;      // label e.g. "Startup Club · Treasurer"
-    sources: Array<{ id: string; name: string }>;
-    permitted: Array<{ id: string; title: string; tier: Tier }>;
-    readInRun: Array<{ id: string; title: string }>;        // cited documents
-    blocked?: Array<{ id: string; title: string | null; reason: AccessCell }>;  // only when the viewer manages the club; null title = "Restricted document"
-    templateVersion: number;
-    rulePack?: { label: string; version: number };
-    billedClub: string;
-    costMicro: number;
-    quotaRemainingMicro: Record<string, number>;
-    auditEventId: number;
-  };
+  inspector: RunInspector;
 }
 
 export interface PreviewMatrix {
@@ -319,17 +340,113 @@ export interface PreviewMatrix {
   cells: Record<string, Record<string, AccessCell>>;        // subjectKey → documentId → cell
 }
 
+// Distribution read models (B → D)
+export interface AgentListing {
+  installationId: string;
+  orgId: string;
+  orgName: string;
+  templateSlug: string;
+  name: string;
+  purpose: string;
+  audience: Audience;
+  reasonLabel: string;            // "All students", "All members", or position names ("Treasurer, President")
+  templateVersion: number;
+}
+
+export interface MyAgentsClub {
+  orgId: string;
+  orgName: string;
+  positionNames: string[];        // the user's positions in this club
+  agents: AgentListing[];
+}
+
+// Quota (§11)
+export type QuotaScope = 'platform' | 'org' | 'member' | 'installation' | 'student_daily';
+
+export interface QuotaTarget {
+  scope: QuotaScope;
+  orgId?: string;
+  userId?: string;
+  installationId?: string;
+}
+
+export interface QuotaRemaining {
+  scope: QuotaScope;
+  limitMicro: number;
+  spentMicro: number;
+  remainingMicro: number;
+}
+
+// Audit (§12)
+export type AuditAction =
+  | 'agent.run' | 'run.access' | 'tool.call' | 'tool.confirm'
+  | 'authz.denied' | 'quota.blocked' | 'quota.limit.set'
+  | 'template.publish' | 'template.distribute' | 'template.retire'
+  | 'installation.update' | 'installation.rejected' | 'agent.publish_public'
+  | 'org.provision' | 'roster.import' | 'connector.sync' | 'position.transfer'
+  | 'rule_pack.publish' | 'document.upload';
+
+export interface AuditEvent {
+  actorUserId: string | null;
+  actingOrgId: string | null;
+  runId?: string;
+  installationId?: string;
+  targetType: string;
+  targetId: string;
+  details: Record<string, string | number | boolean | null | string[] | number[]>;  // ids and numbers only (I8)
+}
+
+export interface AuditEntry extends AuditEvent {
+  id: number;
+  ts: Date;
+  action: AuditAction;
+}
+
 export interface ApiError {
   code: 'unauthenticated' | 'forbidden' | 'quota_exceeded' | 'clamp_violation' | 'not_found' | 'invalid';
   message: string;                                          // UI copy, §11
   cap?: { scope: string; limitMicro?: number; spentMicro?: number; field?: string; allowed?: unknown };
 }
 
-// Connectors (§9)
-export interface IdentityProvider { currentUserId(req: Request): Promise<string | null> }
-export interface RosterSource {
-  fetch(): Promise<Array<{ orgSlug: string; orgName: string; externalUserId: string; userDisplayName: string; position: string }>>;
+const STATUS: Record<ApiError['code'], number> = {
+  unauthenticated: 401,
+  forbidden: 403,
+  quota_exceeded: 429,
+  clamp_violation: 422,
+  not_found: 404,
+  invalid: 400,
+};
+
+/** Thrown by services; `route()` in src/lib/api.ts turns it into a JSON ApiError. */
+export class AppError extends Error {
+  readonly status: number;
+  constructor(readonly error: ApiError) {
+    super(error.message);
+    this.name = 'AppError';
+    this.status = STATUS[error.code];
+  }
 }
+
+// Connectors (§9)
+export type ConnectorKind = 'identity' | 'roster' | 'documents' | 'llm' | 'applications';
+
+export interface ConnectorStatus {
+  kind: ConnectorKind;
+  implementation: string;         // "mock", "csv", "persona", …
+  isMock: boolean;
+  status: 'ok' | 'degraded' | 'down';
+  lastSyncAt: Date | null;
+}
+
+export interface IdentityProvider { currentUserId(req: Request): Promise<string | null> }
+export interface RosterRow {
+  orgSlug: string;
+  orgName: string;
+  externalUserId: string;
+  userDisplayName: string;
+  position: string;
+}
+export interface RosterSource { fetch(): Promise<RosterRow[]> }
 export interface DocumentSource {           // imports from external stores; uploads go through documents.library
   list(orgId: string): Promise<Array<{ externalId: string; title: string }>>;
   read(externalId: string): Promise<{ title: string; bodyMd: string }>;
@@ -621,9 +738,10 @@ done when. H0 = kickoff. All four people work WP-0 together. P0 = every package 
 WP-14.
 
 - **WP-0** · all, led by A · H0–2 · none · repo root, `src/lib/contracts.ts`,
-  `src/lib/db/schema/**` · repo runs; contracts and schema frozen; every stub due by H3 merged.
-- **WP-1** · A · H2–5 · WP-0 · `src/lib/db/**`, `db/migrations/**`, `tests/rls.test.ts` · tables,
-  RLS, triggers, `withActor`; the §10 contract passes.
+  `src/lib/db/schema/**`, `db/migrations/**` · repo runs; contracts and schema frozen; tables,
+  role, RLS, the `read_grants` trigger and `agent_runs_meta` migrated; every stub due by H3 merged.
+- **WP-1** · A · H2–5 · WP-0 · `src/lib/db/**`, `db/migrations/**`, `tests/rls.test.ts` ·
+  `withActor` and the RLS migration proven: the §10 contract passes as `trojanops_app`.
 - **WP-3** · A · H5–7 · WP-1 · `src/lib/{identity,authz}/**`, `src/app/page.tsx`,
   `src/app/api/session/**`, `tests/grants.test.ts` · persona identity, active org, `grantsFor`,
   `capGrants`; Morgan and public-cap tests.

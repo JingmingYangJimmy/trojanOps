@@ -15,3 +15,5 @@ Newest last. Reopening one needs the whole team; record the outcome as a new ent
 | 9 | 2026-11-14 | The funding pre-check is a demo agent; its rule pack uses demo values. | The selling point is the platform, not one rulebook. |
 | 10 | 2026-11-14 | USC look: Cardinal and Gold, Source Sans 3 and Caslon titles, no USC marks, a "not endorsed by USC" footer. | USC brand and student-organization rules. |
 | 11 | 2026-11-14 | Work is split into four streams with path ownership and stubs merged by H3. | Four agents in parallel without editing the same files. |
+| 12 | 2026-11-14 | The role, RLS policies, `read_grants` trigger and `agent_runs_meta` view ship in WP-0, not WP-1. WP-1 proves them with the §10 tests. | Every stream can run `pnpm db:reset` and query as `trojanops_app` from H2. |
+| 13 | 2026-11-14 | `EffectiveAgent` carries `status` (`enabled`, `disabled`, `retired`). | Gateway step 1 must refuse disabled installations and retired templates without a second lookup. |
