@@ -8,14 +8,12 @@ import { AppError, type Actor } from '@/lib/contracts';
 import { pgTextArray } from '@/lib/db/with-actor';
 import { canUse, directory, effectiveAgent, myAgents, provisionOrg, publishToAllStudents } from '@/lib/distribution';
 import { previewAccess } from '@/lib/documents/preview';
-import { runAgent } from '@/lib/gateway';
-import { audit, listAudit } from '@/lib/gateway/audit';
 import { remaining, setLimit } from '@/lib/gateway/quota';
 import { transferPosition } from '@/lib/lifecycle/transfer';
 import { getConnectors, listConnectors } from '@/lib/connectors/registry';
 import { parseRosterCsv } from '@/lib/connectors/roster/mock';
 import { INSTALLATION, ORG, USER } from '@db/seed/ids';
-import { actorFor, appSql, closeAppDb } from './db';
+import { appSql, closeAppDb } from './db';
 
 // grantsFor reads the DB since WP-3, so calls that reach it (getActor, runAgent, B's canUse and
 // myAgents) run only when the database is up. Pure stub calls take a literal Actor.
@@ -54,20 +52,11 @@ describe('A: platform core', () => {
     expect(pgTextArray([])).toBe('{}');
   });
 
-  it('audit and quota keep their shapes', async () => {
+  // runAgent, audit and listAudit are real since WP-4: tests/gateway.test.ts.
+  it('quota keeps its shape', async () => {
     const actor = literal(USER.taylor, ORG.startup, 'treasurer');
-    expect(await audit('quota.limit.set', { actorUserId: null, actingOrgId: null, targetType: 'org', targetId: ORG.startup, details: {} })).toEqual(expect.any(Number));
-    expect(await listAudit(actor)).toEqual(expect.any(Array));
     await expect(setLimit(actor, { scope: 'member', orgId: ORG.startup, userId: USER.casey, limitMicro: 500_000 })).resolves.toBeUndefined();
     expect(await remaining({ scope: 'platform' })).toEqual({ scope: 'platform', limitMicro: expect.any(Number), spentMicro: expect.any(Number), remainingMicro: expect.any(Number) });
-  });
-
-  it.skipIf(!probe)('runAgent returns a RunResult and refuses with AppError', async () => {
-    const taylor = await actorFor(USER.taylor, ORG.startup);
-    const run = await runAgent(taylor, INSTALLATION.startupFundingPrecheck, 'Can we fund pitch night?');
-    expect(Object.keys(run).sort()).toEqual(['citations', 'inspector', 'pendingActions', 'reply', 'runId']);
-    expect(run.inspector.runGrants.length).toBeGreaterThan(0);
-    await expect(runAgent({ ...taylor, userId: null }, INSTALLATION.startupHandoff, 'x')).rejects.toBeInstanceOf(AppError);
   });
 });
 

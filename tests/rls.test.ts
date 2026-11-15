@@ -166,10 +166,13 @@ describe.skipIf(!probe)('withActor and RLS', () => {
       const runId = randomUUID();
       const insertRun = (t: Tx, id: string, userId: string) => t.execute(sql`
         insert into agent_runs (id, installation_id, template_version, org_id, billed_org_id, user_id, input, status, started_at, created_at)
-        values (${id}, ${installationId}, 1, ${ORG.startup}, ${ORG.startup}, ${userId}, 'private question', 'succeeded', ${ts()}, ${ts()})`);
+        values (${id}, ${installationId}, 1, ${ORG.startup}, ${ORG.startup}, ${userId}, 'private question', 'completed', ${ts()}, ${ts()})`);
 
+      // Runs committed before this case (the app role can't delete them) are left out.
+      const existing = new Set((await tx.execute<{ id: string }>(sql`select id from agent_runs_meta`)).map((r) => r.id));
       await withActor(casey, {}, (t) => insertRun(t, runId, USER.casey));
-      const runIds = (t: Tx) => t.execute<{ id: string }>(sql`select id from agent_runs`).then(ids);
+      const runIds = (t: Tx) => t.execute<{ id: string }>(sql`select id from agent_runs`)
+        .then((rows) => ids(rows.filter((r) => !existing.has(r.id))));
       expect(await withActor(casey, {}, runIds)).toEqual([runId]);
       expect(await withActor(taylor, {}, runIds)).toEqual([]);
       expect(await pgError(withActor(casey, {}, (t) => insertRun(t, randomUUID(), USER.taylor)))).toMatch(/row-level security/);
