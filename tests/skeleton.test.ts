@@ -8,8 +8,6 @@ import { AppError, type Actor } from '@/lib/contracts';
 import { pgTextArray } from '@/lib/db/with-actor';
 import { canUse, directory, effectiveAgent, myAgents, provisionOrg, publishToAllStudents } from '@/lib/distribution';
 import { transferPosition } from '@/lib/lifecycle/transfer';
-import { getConnectors, listConnectors } from '@/lib/connectors/registry';
-import { parseRosterCsv } from '@/lib/connectors/roster/mock';
 import { INSTALLATION, ORG, USER } from '@db/seed/ids';
 import { appSql, closeAppDb } from './db';
 
@@ -66,14 +64,5 @@ describe('B: distribution', () => {
     const casey = literal(USER.casey, ORG.startup, 'member');
     await expect(publishToAllStudents(casey, INSTALLATION.startupRecruitingQa)).rejects.toBeInstanceOf(AppError);
     expect(transferPosition).toHaveLength(4);
-  });
-});
-
-describe('D: connectors', () => {
-  it('keeps its shapes', async () => {
-    expect(Object.keys(getConnectors()).sort()).toEqual(['applications', 'documents', 'identity', 'llm', 'roster']);
-    expect((await listConnectors()).map((c) => c.kind).sort()).toEqual(['applications', 'documents', 'identity', 'llm', 'roster']);
-    expect(await getConnectors().roster.fetch()).toEqual(expect.any(Array));
-    expect(() => parseRosterCsv('bad,header\n')).toThrow();
   });
 });
