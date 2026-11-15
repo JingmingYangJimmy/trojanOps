@@ -118,3 +118,11 @@ export const INSTALLATION = {
 export const RULE_PACK = {
   usgFundingV1: id(0x80, 1),
 } as const;
+
+// Departments (D seeds them; presidents manage them from the directory)
+export const DEPARTMENT = {
+  startup: { events: id(0x90, 0x201), finance: id(0x90, 0x202), marketing: id(0x90, 0x203) },
+  archery: { range: id(0x90, 0x301), finance: id(0x90, 0x302) },
+  dance: { choreography: id(0x90, 0x401), production: id(0x90, 0x402) },
+  hacksc: { events: id(0x90, 0x501), finance: id(0x90, 0x502), participantExperience: id(0x90, 0x503) },
+} as const;

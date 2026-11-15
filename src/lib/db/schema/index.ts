@@ -6,3 +6,4 @@ export * from './runs';
 export * from './quota';
 export * from './audit';
 export * from './connectors';
+export * from './departments';

@@ -130,4 +130,6 @@ export interface DepartmentDashboard {
   events: DirectoryEvent[];
   updates: DirectoryUpdate[];
   budget: { allocatedMicro: number; committedMicro: number; lines: Array<{ label: string; amountMicro: number }> } | null;
+  /** Club members not on the department, for the president's "Add member"; null for everyone else. */
+  candidates: DirectoryPerson[] | null;
 }

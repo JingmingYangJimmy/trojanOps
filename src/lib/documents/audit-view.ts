@@ -10,7 +10,7 @@ import { isUsgAdmin, isUuid } from '../authz';
 import { now } from '../clock';
 import { AppError, type Actor, type AuditEntry } from '../contracts';
 import { getDb } from '../db/client';
-import { agentInstallations, agentTemplates, documents, orgs, positions, rulePacks, sources, users } from '../db/schema';
+import { agentInstallations, agentTemplates, departments, documents, orgs, positions, rulePacks, sources, users } from '../db/schema';
 import { withActor } from '../db/with-actor';
 import { listAudit } from '../gateway/audit';
 import { ACTION_LABELS, RESTRICTED_DOCUMENT, type AuditRow } from './audit-row';
@@ -109,6 +109,7 @@ async function toRows(viewer: Actor, entries: AuditEntry[]): Promise<AuditRow[]>
   const userIds = uuids([...entries.map((e) => e.actorUserId), ...ofType('user')]);
   const templateIds = uuids(ofType('template'));
   const positionIds = uuids(ofType('position'));
+  const departmentIds = uuids(ofType('department'));
   const rulePackSlugs = [...new Set(ofType('rule_pack'))];
   const documentIds = uuids(entries.flatMap((e) => [
     ...stringArray(e.details.documentIds), ...(e.targetType === 'document' ? [e.targetId] : []),
@@ -119,6 +120,7 @@ async function toRows(viewer: Actor, entries: AuditEntry[]): Promise<AuditRow[]>
   const userNames = byId(userIds.length ? await db.select({ id: users.id, name: users.displayName }).from(users).where(inArray(users.id, userIds)) : []);
   const templateNames = byId(templateIds.length ? await db.select({ id: agentTemplates.id, name: agentTemplates.name }).from(agentTemplates).where(inArray(agentTemplates.id, templateIds)) : []);
   const positionNames = byId(positionIds.length ? await db.select({ id: positions.id, name: positions.name }).from(positions).where(inArray(positions.id, positionIds)) : []);
+  const departmentNames = byId(departmentIds.length ? await db.select({ id: departments.id, name: departments.name }).from(departments).where(inArray(departments.id, departmentIds)) : []);
   const packs = rulePackSlugs.length
     ? await db.select({ slug: rulePacks.slug, version: rulePacks.version, label: rulePacks.label }).from(rulePacks)
       .where(inArray(rulePacks.slug, rulePackSlugs)).orderBy(asc(rulePacks.version))
@@ -148,6 +150,8 @@ async function toRows(viewer: Actor, entries: AuditEntry[]): Promise<AuditRow[]>
         return t(positionNames.get(e.targetId) ?? 'Unknown position');
       case 'user':
         return t(userNames.get(e.targetId) ?? 'Unknown user');
+      case 'department':
+        return t(departmentNames.get(e.targetId) ?? 'Unknown department');
       case 'template':
         return t(templateNames.get(e.targetId) ?? 'Unknown template');
       case 'rule_pack': {

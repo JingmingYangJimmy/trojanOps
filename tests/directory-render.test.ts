@@ -4,7 +4,7 @@
 // viewer is shown once the service has decided what they may see.
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ClubDashboardView } from '@/app/directory/_dashboard/club-dashboard';
 import { DepartmentDashboardView, DepartmentForbidden } from '@/app/directory/_dashboard/department-dashboard';
 import { filterClubs, NO_FILTERS, type SearchParams } from '@/app/directory/_dashboard/model';
@@ -13,6 +13,8 @@ import type {
   ClubDashboard, ClubOversight, ClubRow, DepartmentDashboard, DirectoryEvent, DirectoryViewer, OfficerSeat,
 } from '@/lib/directory/types';
 import { INSTALLATION, ORG, USER } from '@db/seed/ids';
+
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: () => {}, push: () => {} }) }));
 
 const MICRO = 1_000_000;
 const STARTUP = `/directory/clubs/${ORG.startup}`;
@@ -226,6 +228,12 @@ describe('club dashboard', () => {
     expect(html).toContain(`href="${STARTUP}/departments/events"`);
     expect(html).toContain('Casey');
     expect(html).not.toContain('Semester budget');
+    expect(html).not.toContain('New department');
+  });
+
+  it('offers New department to the club’s president only', () => {
+    const president = club({ ...asUsg, viewer: viewer({ member: true, president: true }) }, { tab: 'departments' });
+    expect(president).toContain('New department');
   });
 });
 
@@ -271,6 +279,7 @@ describe('department dashboard', () => {
     events: events.filter((e) => e.department?.slug === 'events'),
     updates: [],
     budget,
+    candidates: president ? [{ userId: USER.taylor, name: 'Taylor', positions: ['Treasurer', 'Member'] }] : null,
   });
   const render = (data: DepartmentDashboard, searchParams: SearchParams = {}) => renderToStaticMarkup(createElement(DepartmentDashboardView, {
     data, base: '/directory/departments/events', searchParams,
@@ -299,6 +308,15 @@ describe('department dashboard', () => {
     expect(president).toContain('$1,650 of $2,600 committed');
     expect(president).toContain('$1,500');
     expect(president).toContain(`href="/org/${ORG.startup}/admin"`);
+  });
+
+  it('gives the president Edit, Delete, Add member and Remove, and no one else', () => {
+    const member = render(department(null, false), { tab: 'members' });
+    for (const action of ['>Edit<', '>Delete<', 'Add member', '>Remove<']) expect(member).not.toContain(action);
+    const president = render(department(budget, true), { tab: 'members' });
+    for (const action of ['>Edit<', '>Delete<', 'Add member']) expect(president).toContain(action);
+    expect(president).toContain('aria-label="Remove Casey from Events"');
+    expect(president).toContain('aria-label="Remove Jordan from Events"');
   });
 
   it('marks the lead on the Members tab', () => {

@@ -1,19 +1,15 @@
-// Owner: D (WP-11). Demo content for the org directory: club profiles, departments, events and
-// updates. Clubs are keyed by org slug and people by seed `externalId`, so the pages join this to
-// real orgs, users and memberships. Fictional people and placeholder text only (I13); dates and
+// Owner: D (WP-11). Demo content for the org directory: club profiles, department budgets, events
+// and updates. Departments and their members are in the database (db/seed/departments.ts). Clubs
+// are keyed by org slug, departments by slug and people by seed `externalId`, so the pages join this
+// to real orgs, departments, users and memberships. Fictional people and placeholder text only (I13); dates and
 // amounts agree with the seed documents (minutes 2026-10-08, past events, the budgets).
 import type { FundingStatus } from './types';
 import { HACKSC_CONTENT } from './hacksc-content';
 
-export interface DepartmentContent {
-  slug: string;
-  name: string;
-  purpose: string;
-  about: string[];
-  /** Seed `externalId` of the lead, or null while the role is open. */
-  lead: string | null;
-  members: string[];
-  budget: { lines: Array<{ label: string; amountUsd: number }>; committedUsd: number };
+/** A department's semester budget, keyed by department slug in `ClubContent.budgets`. */
+export interface BudgetContent {
+  lines: Array<{ label: string; amountUsd: number }>;
+  committedUsd: number;
 }
 
 export interface EventContent {
@@ -45,7 +41,8 @@ export interface ClubContent {
   categories: string[];
   contactEmail: string;
   meets: string;
-  departments: DepartmentContent[];
+  /** Semester budgets by department slug; the departments themselves are in the database. */
+  budgets: Readonly<Record<string, BudgetContent>>;
   events: EventContent[];
   updates: UpdateContent[];
 }
@@ -57,7 +54,7 @@ export const EMPTY_CLUB: ClubContent = {
   categories: [],
   contactEmail: '',
   meets: '',
-  departments: [],
+  budgets: {},
   events: [],
   updates: [],
 };
@@ -73,46 +70,11 @@ export const CLUB_CONTENT: Readonly<Record<string, ClubContent>> = {
     categories: ['Entrepreneurship', 'Career', 'Pre-professional'],
     contactEmail: 'startup@demo.trojanops.test',
     meets: 'Tuesdays, 7:00 PM, Ronald Tutor Campus Center',
-    departments: [
-      {
-        slug: 'events',
-        name: 'Events',
-        purpose: 'Plans Pitch night, the speaker series and Demo day: rooms, catering and the run of show.',
-        about: [
-          'Events books rooms at least four weeks ahead, runs check-in and keeps the timer on pitch nights.',
-          'Catering needs a named officer on site to receive the order, so every event lists one in its run of show.',
-        ],
-        lead: 'casey',
-        members: ['casey', 'jordan'],
-        budget: {
-          lines: [{ label: 'Pitch night', amountUsd: 1500 }, { label: 'Founder fireside chat', amountUsd: 700 }, { label: 'Spring kickoff', amountUsd: 400 }],
-          committedUsd: 1650,
-        },
-      },
-      {
-        slug: 'finance',
-        name: 'Finance',
-        purpose: 'Keeps the budget, files USG funding requests and settles invoices after each event.',
-        about: [
-          'Finance drafts each USG funding request and runs it through Funding pre-check before the Wednesday deadline.',
-          'Receipts and final invoices go to the treasurer within three business days of each event.',
-        ],
-        lead: 'taylor',
-        members: ['taylor', 'jordan'],
-        budget: { lines: [{ label: 'Contingency', amountUsd: 400 }, { label: 'Bank and card fees', amountUsd: 100 }], committedUsd: 40 },
-      },
-      {
-        slug: 'marketing',
-        name: 'Marketing and recruiting',
-        purpose: 'Runs info sessions, the interest form and the posters for every event.',
-        about: [
-          'Marketing and recruiting runs the info sessions in the first three weeks of each semester and keeps the interest form open between them.',
-        ],
-        lead: 'morgan',
-        members: ['morgan', 'casey'],
-        budget: { lines: [{ label: 'Printing and signage', amountUsd: 350 }, { label: 'Info session snacks', amountUsd: 150 }], committedUsd: 210 },
-      },
-    ],
+    budgets: {
+      events: { lines: [{ label: 'Pitch night', amountUsd: 1500 }, { label: 'Founder fireside chat', amountUsd: 700 }, { label: 'Spring kickoff', amountUsd: 400 }], committedUsd: 1650 },
+      finance: { lines: [{ label: 'Contingency', amountUsd: 400 }, { label: 'Bank and card fees', amountUsd: 100 }], committedUsd: 40 },
+      marketing: { lines: [{ label: 'Printing and signage', amountUsd: 350 }, { label: 'Info session snacks', amountUsd: 150 }], committedUsd: 210 },
+    },
     events: [
       {
         id: 'startup-fall-info-session', title: 'Fall info session', startsAt: '2026-09-02T19:00:00-07:00', endsAt: '2026-09-02T20:00:00-07:00',
@@ -168,26 +130,10 @@ export const CLUB_CONTENT: Readonly<Record<string, ClubContent>> = {
     categories: ['Sports', 'Recreation'],
     contactEmail: 'archery@demo.trojanops.test',
     meets: 'Saturdays, 9:00 AM, partner range',
-    departments: [
-      {
-        slug: 'range',
-        name: 'Range operations',
-        purpose: 'Books range time, keeps the equipment log and runs the safety briefing.',
-        about: ['Range operations runs the safety briefing at the start of every session and checks out club bows.'],
-        lead: null,
-        members: [],
-        budget: { lines: [{ label: 'Range fees', amountUsd: 1100 }, { label: 'New targets', amountUsd: 450 }], committedUsd: 1100 },
-      },
-      {
-        slug: 'finance',
-        name: 'Finance',
-        purpose: 'Keeps the budget and pays range fees.',
-        about: ['Finance pays range fees for the year up front and tracks equipment purchases.'],
-        lead: 'morgan',
-        members: ['morgan'],
-        budget: { lines: [{ label: 'Arrows and spare strings', amountUsd: 300 }, { label: 'Safety gear for beginners', amountUsd: 150 }], committedUsd: 150 },
-      },
-    ],
+    budgets: {
+      range: { lines: [{ label: 'Range fees', amountUsd: 1100 }, { label: 'New targets', amountUsd: 450 }], committedUsd: 1100 },
+      finance: { lines: [{ label: 'Arrows and spare strings', amountUsd: 300 }, { label: 'Safety gear for beginners', amountUsd: 150 }], committedUsd: 150 },
+    },
     events: [
       {
         id: 'archery-equipment-night', title: 'Equipment night', startsAt: '2026-10-03T18:00:00-07:00', endsAt: '2026-10-03T20:00:00-07:00',
@@ -220,18 +166,10 @@ export const CLUB_CONTENT: Readonly<Record<string, ClubContent>> = {
     categories: ['Performing arts', 'Cultural'],
     contactEmail: 'dance@demo.trojanops.test',
     meets: 'Mondays and Thursdays, 8:00 PM, Physical Education building',
-    departments: [
-      {
-        slug: 'choreography', name: 'Choreography', purpose: 'Sets the pieces and runs rehearsals for the showcase.',
-        about: ['Choreography sets each showcase piece and runs the weekly rehearsals.'], lead: null, members: [],
-        budget: { lines: [{ label: 'Studio time', amountUsd: 600 }], committedUsd: 0 },
-      },
-      {
-        slug: 'production', name: 'Production', purpose: 'Lighting, sound, costumes and the showcase run of show.',
-        about: ['Production works with the venue on lighting and sound and keeps the costume inventory.'], lead: null, members: [],
-        budget: { lines: [{ label: 'Costumes', amountUsd: 900 }, { label: 'Lighting and sound', amountUsd: 1200 }], committedUsd: 0 },
-      },
-    ],
+    budgets: {
+      choreography: { lines: [{ label: 'Studio time', amountUsd: 600 }], committedUsd: 0 },
+      production: { lines: [{ label: 'Costumes', amountUsd: 900 }, { label: 'Lighting and sound', amountUsd: 1200 }], committedUsd: 0 },
+    },
     events: [
       {
         id: 'dance-open-rehearsal', title: 'Open rehearsal', startsAt: '2026-11-19T20:00:00-08:00', endsAt: '2026-11-19T22:00:00-08:00',

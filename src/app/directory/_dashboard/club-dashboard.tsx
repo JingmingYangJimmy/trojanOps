@@ -8,6 +8,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { ClubDashboard } from '@/lib/directory/types';
 import { cohortLabel, count } from '@/lib/directory/view';
+import { NewDepartmentButton } from './department-actions';
 import { DepartmentsTable } from './departments';
 import { EventsSection, UpcomingPanel } from './events';
 import { DashboardHeader } from './header';
@@ -50,7 +51,10 @@ export function ClubDashboardView({ data, searchParams }: { data: ClubDashboard;
       {active === 'officers' && <OfficersList seats={data.officers} />}
       {active === 'departments' && data.departments && (
         <section aria-labelledby="departments-heading">
-          <h2 id="departments-heading" className="mb-3 text-xl font-semibold leading-7">Departments</h2>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 id="departments-heading" className="text-xl font-semibold leading-7">Departments</h2>
+            {viewer.president && <NewDepartmentButton orgId={club.id} clubName={club.name} base={`${base}/departments`} />}
+          </div>
           <DepartmentsTable departments={data.departments} club={club.name} base={`${base}/departments`} />
         </section>
       )}

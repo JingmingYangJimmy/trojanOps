@@ -89,19 +89,30 @@ export function OfficersList({ seats }: { seats: readonly OfficerSeat[] }) {
   );
 }
 
-/** The roster: name and positions. `lead` marks a department's lead. */
-export function MembersTable({ members, label, leadId }: { members: readonly DirectoryPerson[]; label: string; leadId?: string | null }) {
-  if (members.length === 0) return <Empty>No members yet.</Empty>;
+/** The roster: name and positions. `lead` marks a department's lead. `action` sits beside the
+ * heading and `rowAction` in a last column, for the president managing a department. */
+export function MembersTable({ members, label, leadId, action, rowAction }: {
+  members: readonly DirectoryPerson[];
+  label: string;
+  leadId?: string | null;
+  action?: React.ReactNode;
+  rowAction?: (member: DirectoryPerson) => React.ReactNode;
+}) {
+  if (members.length === 0) return <Empty action={action}>No members yet.</Empty>;
   return (
     <section aria-labelledby="members-heading" className="max-w-[880px]">
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="members-heading" className="text-xl font-semibold leading-7">Members</h2>
-        <p className="tabular-nums text-muted-foreground">{count(members.length, 'member')}</p>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-baseline gap-x-3">
+          <h2 id="members-heading" className="text-xl font-semibold leading-7">Members</h2>
+          <p className="tabular-nums text-muted-foreground">{count(members.length, 'member')}</p>
+        </div>
+        {action}
       </div>
       <Table aria-label={label} className="min-w-[480px]">
         <TableHeader><TableRow>
           <TableHead>Name</TableHead>
           <TableHead>Positions</TableHead>
+          {rowAction && <TableHead><span className="sr-only">Actions</span></TableHead>}
         </TableRow></TableHeader>
         <TableBody>
           {members.map((m) => (
@@ -114,6 +125,7 @@ export function MembersTable({ members, label, leadId }: { members: readonly Dir
                 </span>
               </TableCell>
               <TableCell className="[overflow-wrap:anywhere]">{m.positions.join(', ') || 'Member'}</TableCell>
+              {rowAction && <TableCell className="w-24 text-right">{rowAction(m)}</TableCell>}
             </TableRow>
           ))}
         </TableBody>

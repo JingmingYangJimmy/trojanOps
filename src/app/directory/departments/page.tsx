@@ -7,6 +7,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { departmentsDirectory } from '@/lib/directory/service';
 import { count } from '@/lib/directory/view';
 import { getActor } from '@/lib/identity';
+import { NewDepartmentButton } from '../_dashboard/department-actions';
 import { DepartmentsTable } from '../_dashboard/departments';
 import { clubPath } from '../_dashboard/model';
 import { DirectorySignedOut } from '../_dashboard/route-states';
@@ -19,7 +20,10 @@ export default async function DepartmentsPage() {
   if (!view) redirect('/directory/clubs');
   return <>
     <PageHeader title={`${view.club.name} departments`} description={count(view.departments.length, 'department')}
-      action={<Link href={clubPath(view.club.id)} className={buttonVariants({ variant: 'secondary' })}>Club profile</Link>} />
+      action={<div className="flex flex-wrap items-center gap-2">
+        <Link href={clubPath(view.club.id)} className={buttonVariants({ variant: 'secondary' })}>Club profile</Link>
+        {view.viewer.president && <NewDepartmentButton orgId={view.club.id} clubName={view.club.name} base="/directory/departments" />}
+      </div>} />
     <div className="mb-6"><DepartmentsSummary data={view} /></div>
     <DepartmentsTable departments={view.departments} club={view.club.name} base="/directory/departments" />
   </>;

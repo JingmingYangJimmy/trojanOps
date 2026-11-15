@@ -7,6 +7,7 @@ import { seedPersonas } from './personas';
 import { seedDistribution } from './distribution';
 import { seedDocuments } from './documents';
 import { seedQuota } from './quota';
+import { seedDepartments } from './departments';
 
 export type SeedDb = PostgresJsDatabase<typeof schema>;
 
@@ -15,6 +16,7 @@ export async function seed(db: SeedDb): Promise<void> {
   await db.transaction(async (tx) => {
     await seedOrgs(tx);         // D
     await seedPersonas(tx);     // D
+    await seedDepartments(tx);  // D
     await seedDistribution(tx); // B
     await seedDocuments(tx);    // C
     await seedQuota(tx);        // A

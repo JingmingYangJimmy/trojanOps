@@ -138,7 +138,7 @@ src/lib/
   lifecycle/     transfer.ts                                                B
                  import.ts                                                  D
   documents/     library.ts, access.ts (listAccessibleDocuments, explainAccess), preview.ts   C
-  directory/     service.ts (clubs, departments, dashboards), content.ts, view.ts           D
+  directory/     service.ts (clubs, departments, dashboards), departments.ts (president writes), content.ts, view.ts   D
   connectors/    registry.ts + one folder per kind, each with mock.ts       D
                  llm/**                                                     A
 src/components/  ui/ (shadcn, restyled), shell/ (masthead, side nav, footer)   D
@@ -199,6 +199,13 @@ Every id is `uuid default gen_random_uuid()`; every table has `created_at` writt
 - `ai_usage(id, run_id, billed_org_id, user_id, installation_id, is_public bool, model text, kind text check (kind in ('hold','settle','release')), amount_micro bigint, created_at)`
 - `audit_events(id bigserial, ts, actor_user_id null, acting_org_id null, action text, run_id null, installation_id null, target_type text, target_id text, details jsonb)`
 - `connectors(kind text primary key, implementation text, status text, last_sync_at timestamptz null, details jsonb)` (D)
+
+### Departments (D)
+
+- `departments(id, org_id → orgs, slug text, name text, purpose text default '', about text[] default '{}', lead_user_id → users null, archived_at null)`; unique `(org_id, slug)` among live rows (`archived_at is null`), so an archived slug can be reused. The slug comes from the name at creation and never changes.
+- `department_members(department_id → departments, user_id → users, primary key (department_id, user_id))`; the lead must be on the department.
+  - No RLS (like memberships): `src/lib/directory/departments.ts` lets only the president acting in the club write, re-checked inside each write's transaction. Departments are archived, never deleted; the app role may delete from `department_members` (migration 0007), and the audit log keeps the history.
+  - The directory shows a department's members who are still active members of the club. Budgets, events and updates stay demo content in `src/lib/directory/content.ts`, keyed by department slug.
 
 ### Grants
 
@@ -420,7 +427,9 @@ export type AuditAction =
   | 'installation.update' | 'installation.rejected' | 'agent.publish_public'
   | 'org.provision' | 'roster.import' | 'connector.sync' | 'position.transfer'
   | 'rule_pack.publish' | 'document.upload' | 'document.access'
-  | 'member.add' | 'member.remove' | 'position.create' | 'position.assign' | 'position.unassign';
+  | 'member.add' | 'member.remove' | 'position.create' | 'position.assign' | 'position.unassign'
+  | 'department.create' | 'department.update' | 'department.archive'
+  | 'department.member.add' | 'department.member.remove';
 
 export interface AuditEvent {
   actorUserId: string | null;
@@ -730,6 +739,8 @@ UI copy for `quota_exceeded`, by scope:
 - `org.provision`, `roster.import`, `connector.sync`, `position.transfer`
 - `rule_pack.publish`, `document.upload`, `document.access`
 - `member.add`, `member.remove`, `position.create`, `position.assign`, `position.unassign`
+- `department.create`, `department.update`, `department.archive`, `department.member.add`,
+  `department.member.remove` (target `department`)
 
 USG admins see all metadata; presidents see their club. Document ids resolve to titles under the
 viewer's RLS; unreadable ones render as "Restricted document".
@@ -787,6 +798,9 @@ Every handler: `const actor = await getActor(req)` → one service call → JSON
 | POST `/api/orgs/:orgId/positions/:slug/holders` body `{ userId }`, DELETE `/api/orgs/:orgId/positions/:slug/holders/:userId` | `lifecycle.assignPosition`, `unassignPosition` | president | B |
 | GET/POST `/api/orgs/:orgId/documents` | `documents.library` | members (read via RLS), president or USG admin for USG (upload) | C |
 | GET `/api/orgs/:orgId/preview?installation=` | `documents.previewAccess` | president | C |
+| POST `/api/orgs/:orgId/departments` body `{ name, purpose?, about? }` | `directory.createDepartment` | president | D |
+| PATCH `/api/orgs/:orgId/departments/:slug` body `{ name?, purpose?, about?, leadUserId? }`, DELETE (archives) | `directory.updateDepartment`, `archiveDepartment` | president | D |
+| POST `/api/orgs/:orgId/departments/:slug/members` body `{ userId }`, DELETE `…/members/:userId` | `directory.addDepartmentMember`, `removeDepartmentMember` | president | D |
 | POST `/api/usg/connectors/roster/sync` | `lifecycle.importRoster` | USG admin | D |
 | POST `/api/demo/clock` | demo | `DEMO_MODE` only | D |
 
@@ -814,8 +828,8 @@ Pages (25):
 | `/directory`: redirects to departments when acting in a club, else to clubs | D |
 | `/directory/clubs`: clubs; USG also sees status, monthly quota and USG funding | D |
 | `/directory/clubs/[orgId]?tab=`: club dashboard (about, events, members, officers, departments, agents); members, departments, member-only updates and each event's department and funding for the club's members and USG; quota, policy and funding totals for USG | D |
-| `/directory/departments`: the active club's departments; budgets for the president | D |
-| `/directory/departments/[slug]`: a department of the active club; `/directory/clubs/[orgId]/departments/[slug]`: any club's department, for its members and USG. Department dashboard: about, events, members | D |
+| `/directory/departments`: the active club's departments; budgets and New department for the president | D |
+| `/directory/departments/[slug]`: a department of the active club; `/directory/clubs/[orgId]/departments/[slug]`: any club's department, for its members and USG. Department dashboard: about, events, members; the president also gets Edit, Delete, Add member and Remove | D |
 | `/directory/[installationId]`: run + inspector | D |
 | `/usg/integrations` | D |
 | `/demo`: clock control and the reset command | D |
@@ -824,6 +838,7 @@ Pages (25):
 
 **Orgs:** `usg`, `startup` (Startup Club), `archery` (Archery Club), `dance` (Dance Club), `hacksc`
 (HackSC). Cohort `pilot` = startup + archery + hacksc. `roster.csv` adds Robotics Club (§13).
+Departments and their members: `db/seed/departments.ts` (Startup: Events, Finance, Marketing and recruiting; Archery: Range operations, Finance; Dance: Choreography, Production; HackSC: Events, Finance, Participant experience).
 
 | Persona | Memberships | Used in |
 |---|---|---|

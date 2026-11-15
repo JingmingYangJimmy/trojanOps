@@ -144,7 +144,9 @@ export type AuditAction =
   | 'installation.update' | 'installation.rejected' | 'agent.publish_public'
   | 'org.provision' | 'roster.import' | 'connector.sync' | 'position.transfer'
   | 'rule_pack.publish' | 'document.upload' | 'document.access'
-  | 'member.add' | 'member.remove' | 'position.create' | 'position.assign' | 'position.unassign';
+  | 'member.add' | 'member.remove' | 'position.create' | 'position.assign' | 'position.unassign'
+  | 'department.create' | 'department.update' | 'department.archive'
+  | 'department.member.add' | 'department.member.remove';
 
 export interface AuditEvent {
   actorUserId: string | null;
