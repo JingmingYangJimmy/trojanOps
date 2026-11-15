@@ -11,7 +11,7 @@ import styles from './sign-in.module.css';
 import Image from 'next/image';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DEMO_PASSWORD, matchAccount, type DemoAccount } from '@/lib/identity/demo-accounts';
+import { DEMO_PASSWORD, DEMO_SIGN_IN_IDS, matchAccount, type DemoAccount } from '@/lib/identity/demo-accounts';
 
 interface Props {
   accounts: DemoAccount[];
@@ -57,7 +57,7 @@ export function SignInForm({ accounts, prefill }: Props) {
   const inFlight = useRef(false);
   const idRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
-  const [signInId, setSignInId] = useState(prefill?.signInId ?? '');
+  const [signInId, setSignInId] = useState(prefill ? DEMO_SIGN_IN_IDS.get(prefill.netId) ?? prefill.signInId : '');
   const [password, setPassword] = useState(prefill ? DEMO_PASSWORD : '');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});

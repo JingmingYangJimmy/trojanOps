@@ -6,7 +6,19 @@
 export const DEMO_ACCOUNT_ORDER = ['avery', 'sam', 'taylor', 'jordan', 'casey', 'lee', 'morgan', 'riley'] as const;
 
 /** The one password every demo account accepts. Not a secret: it ships to the browser. */
-export const DEMO_PASSWORD = 'fighton';
+export const DEMO_PASSWORD = 'demo123';
+
+/** Memorable sign-in aliases for the seeded demo roles. */
+export const DEMO_SIGN_IN_IDS: ReadonlyMap<string, string> = new Map([
+  ['avery', 'admin'],
+  ['sam', 'president'],
+  ['taylor', 'treasurer'],
+  ['jordan', 'successor'],
+  ['casey', 'member'],
+  ['lee', 'student'],
+  ['morgan', 'multi'],
+  ['riley', 'reviewer'],
+]);
 
 export interface DemoAccount {
   /** Position in the `/?account=N` links, from 1. */
@@ -30,5 +42,9 @@ export function accountFromParam(accounts: readonly DemoAccount[], param: string
 export function matchAccount(accounts: readonly DemoAccount[], id: string, password: string): DemoAccount | null {
   const wanted = id.trim().toLowerCase();
   if (!wanted || password !== DEMO_PASSWORD) return null;
-  return accounts.find((a) => a.netId.toLowerCase() === wanted || a.signInId.toLowerCase() === wanted) ?? null;
+  return accounts.find((account) =>
+    account.netId.toLowerCase() === wanted ||
+    account.signInId.toLowerCase() === wanted ||
+    DEMO_SIGN_IN_IDS.get(account.netId) === wanted,
+  ) ?? null;
 }

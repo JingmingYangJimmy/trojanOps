@@ -61,6 +61,15 @@ describe('matchAccount and accountFromParam', () => {
     expect(matchAccount(fixture, '   ', DEMO_PASSWORD)).toBeNull();
   });
 
+  it('accepts each role alias with the shared demo password', () => {
+    const aliases = ['admin', 'president', 'treasurer', 'successor', 'member', 'student', 'multi', 'reviewer'];
+    const accounts = DEMO_ACCOUNT_ORDER.map((netId, i) => ({ n: i + 1, netId, userId: netId, signInId: `${netId}@demo.trojanops.test`, landing: '/me/agents' }));
+    for (const [i, alias] of aliases.entries()) {
+      expect(matchAccount(accounts, ` ${alias.toUpperCase()} `, 'demo123')?.netId).toBe(DEMO_ACCOUNT_ORDER[i]);
+      expect(matchAccount(accounts, alias, 'wrong')).toBeNull();
+    }
+  });
+
   it('reads only a whole account number', () => {
     expect(accountFromParam(fixture, '2')?.netId).toBe('sam');
     for (const bad of [undefined, '', '0', '9', '2x', '-1', '1.0', ['1']]) {
@@ -85,8 +94,8 @@ describe('SignInForm markup', () => {
 
   it('prefills the sign-in ID and a masked password for a /?account=N link', () => {
     const html = renderToStaticMarkup(createElement(SignInForm, { accounts: fixture, prefill: fixture[1] }));
-    expect(html).toMatch(/id="sign-in-id"[^>]*value="sam@demo.trojanops.test"|value="sam@demo.trojanops.test"[^>]*id="sign-in-id"/);
-    expect(html).toMatch(/type="password"[^>]*value="fighton"|value="fighton"[^>]*type="password"/);
+    expect(html).toMatch(/id="sign-in-id"[^>]*value="president"|value="president"[^>]*id="sign-in-id"/);
+    expect(html).toMatch(/type="password"[^>]*value="demo123"|value="demo123"[^>]*type="password"/);
     expect(html).not.toMatch(NAMES);
   });
 });
@@ -141,7 +150,7 @@ describe.skipIf(!probe)('the / page', () => {
     process.env.DEMO_MODE = '1';
     signInAs(USER.sam);
     const html = renderToStaticMarkup(await render({ account: '5' }));
-    expect(html).toContain('value="casey@demo.trojanops.test"');
+    expect(html).toContain('value="member"');
     signInAs(null);
     const empty = renderToStaticMarkup(await render({ account: '99' }));
     expect(empty).toContain('Please sign in to continue.');
