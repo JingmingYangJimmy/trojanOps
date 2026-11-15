@@ -26,6 +26,8 @@ function membershipQuery() {
     .select({
       userId: users.id,
       displayName: users.displayName,
+      netId: users.externalId,
+      demoEmail: users.demoEmail,
       orgId: memberships.orgId,
       orgName: orgs.name,
       orgKind: orgs.kind,
@@ -41,12 +43,21 @@ function membershipQuery() {
 
 type MembershipRow = Awaited<ReturnType<typeof membershipQuery>>[number];
 
+/** A user's identity fields and active memberships. `netId` is the identity provider's id
+ * (`users.external_id`); `demoEmail` is the seeded demo sign-in address, if any. */
+interface UserMemberships {
+  displayName: string;
+  netId: string;
+  demoEmail: string | null;
+  held: ActiveMembership[];
+}
+
 /** Groups left-joined rows by user; a user without active memberships gets []. */
-function groupByUser(rows: MembershipRow[]): Map<string, { displayName: string; held: ActiveMembership[] }> {
-  const byUser = new Map<string, { displayName: string; held: ActiveMembership[] }>();
+function groupByUser(rows: MembershipRow[]): Map<string, UserMemberships> {
+  const byUser = new Map<string, UserMemberships>();
   for (const r of rows) {
     let entry = byUser.get(r.userId);
-    if (!entry) byUser.set(r.userId, (entry = { displayName: r.displayName, held: [] }));
+    if (!entry) byUser.set(r.userId, (entry = { displayName: r.displayName, netId: r.netId, demoEmail: r.demoEmail, held: [] }));
     if (r.orgId && r.orgName && r.orgKind && r.positionSlug && r.positionName) {
       entry.held.push({ orgId: r.orgId, orgName: r.orgName, orgKind: r.orgKind, positionSlug: r.positionSlug, positionName: r.positionName });
     }
@@ -65,7 +76,7 @@ export async function activeMemberships(userId: string): Promise<ActiveMembershi
 }
 
 /** Every user with their active memberships, ordered by display name, in one query. */
-export async function allActiveMemberships(): Promise<Array<{ userId: string; displayName: string; held: ActiveMembership[] }>> {
+export async function allActiveMemberships(): Promise<Array<{ userId: string } & UserMemberships>> {
   const rows = await membershipQuery().orderBy(asc(users.displayName), asc(users.id), asc(orgs.name), asc(positions.slug));
   return [...groupByUser(rows)].map(([userId, e]) => ({ userId, ...e }));
 }

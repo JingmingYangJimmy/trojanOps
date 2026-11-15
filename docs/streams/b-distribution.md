@@ -136,3 +136,56 @@ coordinate membership writes with this service's club-row lock. D's
 `src/lib/lifecycle/import.ts` compares against `roster_state`; `tests/roster-import.test.ts` covers a
 sync after a manual transfer. The transfer API and admin form remain
 separate slices.
+
+## WP-6 USG console
+
+`/usg/templates`, `/usg/templates/[templateId]`, `/usg/clubs`, and `/usg/rule-packs` now
+use authorized, serializable server models in `usg-view.ts`. USG admins can review version history,
+change rollout metadata, distribute to all active clubs or a seeded cohort, publish immutable
+versions, retire templates, edit club quotas/policy, and publish rule-pack versions. Required
+rollouts and retirement require the typed template name; other publication actions show a review.
+Client components import only distribution types and call the existing HTTP services.
+
+New §14 routes:
+
+- GET/PATCH `/api/usg/templates/:templateId`: immutable history/target summary and strict metadata
+  edits (`name`, `target`, `distribution`). Changing a target affects future rollout/provisioning;
+  it does not remove old installations. A distributed template keeps its distribution type.
+- PUT `/api/usg/club-policy/:orgId`: USG-only policy update. Checks every non-retired installed resolved version
+  against the proposed policy before writing, including disabled/pinned installations. A conflicting
+  override or public agent must be narrowed by its club first; the policy setter does not disable
+  or rewrite that club's installation silently.
+- POST `/api/orgs/:orgId/installations`: president-only optional global/own-club installation,
+  body `{templateId}`. Cohorts, active club/template, policy and I7 are checked before inserting.
+  Existing installations are preserved. New public installations stay disabled and receive an own
+  budget; opening them to the campus still requires Publish to all students.
+
+`TODO(verify):` frozen `AuditAction` has no policy or metadata edit action. Policy edits currently use
+`installation.update` with an org target and `resource: 'club_policy'` (visible in the president's
+audit); metadata edits use `template.publish` with `metadataOnly: true`. Ask A to add dedicated
+contract actions before relying on these labels for reporting. No contract was changed here.
+
+Validation: `tests/usg-management.test.ts` covers console authorization, denied-read audits,
+policy clamps/audit visibility, immutable version history, optional installation, and these routes.
+D2/D6 were also exercised through the local pages: distribute Event planning to three clubs, reject
+Sam's standard-model override with the economy cap, publish the $10,000 funding pack, and run the
+funding agent through the gateway to see v2. Use `pnpm db:reset` before the full test run after such
+browser checks, since those demo actions deliberately change the seeded database.
+
+
+### Retired installations and policy tightening
+
+Terminal retired templates do not block a later policy change. Disabled and pinned installations
+of active templates still pass the full I7 policy check before any write. Historical versions,
+installation overrides, quotas and audit history are not rewritten or deleted to satisfy a new
+policy. Catalog reads retired presentation metadata separately, marks it unavailable, and never
+uses that projection as an `EffectiveAgent`; a fresh retired record wins over an earlier active
+snapshot when retirement races the read. Runtime composition and policy clamps remain unchanged.
+A now policy-incompatible retired installation fails closed with the generic runtime clamp refusal
+before execution, rather than reaching A's specific retired-status denial message. Preserving that
+specific gateway message/audit for this case remains an A integration consideration.
+
+`tests/retired-policy.test.ts` covers public and disjoint-model policy changes after retirement,
+unchanged historical/pinned records, catalog visibility and concurrent retirement, exclusion from
+usable lists, and gateway rejection before runtime/quota use. It also checks that disabled/pinned
+installations of active templates still prevent incompatible changes.

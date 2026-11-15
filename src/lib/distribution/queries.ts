@@ -3,7 +3,7 @@
 //
 // The distribution tables carry no RLS (I2 covers documents and agent_runs), so they are read with
 // getDb(), the same way authz reads memberships.
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { isUuid } from '../authz';
 import { AppError, type EffectiveAgent, type ModelClass } from '../contracts';
 import { getDb } from '../db/client';
@@ -38,6 +38,8 @@ export interface AgentFilter {
   orgIds?: string[];
   /** Only agents a club has switched on, whose template is not retired. */
   enabledOnly?: boolean;
+  /** Catalog reads terminal retired records through a metadata-only projection. */
+  excludeRetired?: boolean;
 }
 
 export interface LoadedAgent {
@@ -129,6 +131,7 @@ async function loadComposeInputs(filter: AgentFilter): Promise<LoadedInput[]> {
     filter.installationId ? eq(agentInstallations.id, filter.installationId) : undefined,
     filter.orgIds ? inArray(agentInstallations.orgId, filter.orgIds) : undefined,
     filter.enabledOnly ? eq(agentInstallations.enabled, true) : undefined,
+    filter.excludeRetired ? ne(agentTemplates.status, 'retired') : undefined,
   ].filter(Boolean);
 
   // leftJoin, not inner: an installation whose version cannot be resolved must be reported, not

@@ -32,7 +32,7 @@ export function Masthead({ scopes, signedIn, currentUserId, activeOrgId, demoMod
   const [status, setStatus] = useState('');
   const [error, setError] = useState<{ message: string; change: SessionChange } | null>(null);
   const currentName = personas.find((person) => person.userId === currentUserId)?.name;
-  const accountLabel = currentName ?? (signedIn ? 'Account' : 'Choose persona');
+  const accountLabel = currentName ?? 'Account';
 
   function change(change: SessionChange) {
     if (inFlight.current || pending) return;
@@ -62,7 +62,7 @@ export function Masthead({ scopes, signedIn, currentUserId, activeOrgId, demoMod
       <Link href="/" className="flex shrink-0 items-center px-3 text-base font-bold tracking-tight sm:px-6">TrojanOps</Link>
       <ScopeLinks scopes={scopes} />
       <div className="ml-auto flex min-w-0 shrink-0 items-center px-3 sm:px-6">
-        {demoMode || signedIn ? <DropdownMenu>
+        {signedIn ? <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button type="button" disabled={pending} aria-busy={pending} aria-label={demoMode ? `Persona: ${accountLabel}` : accountLabel}
               className="flex h-9 items-center gap-2 rounded-md px-2 hover:bg-primary-hover disabled:cursor-wait">
@@ -74,13 +74,12 @@ export function Masthead({ scopes, signedIn, currentUserId, activeOrgId, demoMod
           <DropdownMenuContent align="end" className="w-64">
             {demoMode && <>
               <DropdownMenuLabel>Persona</DropdownMenuLabel>
-              {personas.length === 0 ? <p className="px-2 py-2 text-muted-foreground">No personas available. Open the persona page to check the demo data.</p> :
+              {personas.length === 0 ? <p className="px-2 py-2 text-muted-foreground">No personas available. Run pnpm db:reset to seed the demo data.</p> :
                 <DropdownMenuRadioGroup value={currentUserId ?? ''} onValueChange={(userId) => {
                   if (userId !== currentUserId) change({ kind: 'persona', userId });
                 }}>
                   {personas.map((person) => <DropdownMenuRadioItem key={person.userId} value={person.userId}>{person.name}</DropdownMenuRadioItem>)}
                 </DropdownMenuRadioGroup>}
-              <DropdownMenuItem asChild><Link href="/">View personas and positions</Link></DropdownMenuItem>
             </>}
             {clubs.length > 1 && <>
               {demoMode && <DropdownMenuSeparator />}
@@ -91,12 +90,10 @@ export function Masthead({ scopes, signedIn, currentUserId, activeOrgId, demoMod
                 {clubs.map((club) => <DropdownMenuRadioItem key={club.orgId} value={club.orgId}>{club.orgName}</DropdownMenuRadioItem>)}
               </DropdownMenuRadioGroup>
             </>}
-            {signedIn && <>
-              {(demoMode || clubs.length > 1) && <DropdownMenuSeparator />}
-              <DropdownMenuItem onSelect={() => change({ kind: 'persona', userId: null })}>Sign out</DropdownMenuItem>
-            </>}
+            {(demoMode || clubs.length > 1) && <DropdownMenuSeparator />}
+            <DropdownMenuItem onSelect={() => change({ kind: 'persona', userId: null })}>Sign out</DropdownMenuItem>
           </DropdownMenuContent>
-        </DropdownMenu> : <span className="flex items-center gap-2"><User aria-hidden="true" className="size-4" />Signed out</span>}
+        </DropdownMenu> : <Link href="/" className="flex h-9 items-center gap-2 rounded-md px-2 hover:bg-primary-hover"><User aria-hidden="true" className="size-4" />Sign in</Link>}
       </div>
     </header>
     <p aria-live="polite" className="sr-only">{status}</p>
