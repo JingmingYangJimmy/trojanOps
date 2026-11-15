@@ -1,38 +1,67 @@
 # TrojanOps
 
-TrojanOps 把 USC 现有的身份、社团名单、文档和模型系统接到一个平台上，让每个社团都用上受管的 AI 智能体：
+**Governed AI agents for USC student government and student clubs.**
 
-- 社团对外发布公开智能体，服务全校学生；
-- 社团对内使用内部智能体，服务成员和干部；
-- 学生会统一分发智能体模板、分配额度、制定规则。
+TrojanOps connects the systems a campus already has — NetID login, club rosters, club documents, a
+campus model gateway — into one platform where USG distributes agents, quotas and document
+permissions to clubs, clubs expose agents to their members or to every student, and **every agent
+run goes through the platform gateway**. What a single run is allowed to read is decided by
+PostgreSQL row-level security, not by prompt text.
 
-每次智能体运行都经过平台网关。一次运行能读哪些文档，由 PostgreSQL 行级安全策略决定。
+Built for the **AI@USC Hackathon**, November 14–15 2026. The platform runs end to end on a mock
+agent runtime; real agents (model, retrieval, tools) are the last layer and are not wired yet (see
+[Status](#status)). This is a student hackathon project and is not affiliated with USC or USG.
 
-这是 AI@USC Hackathon（2026 年 11 月 14–15 日）的参赛项目。平台先在模拟运行时上完整跑通，真实智能体（模型、检索、工具）最后接入。本项目是学生黑客松作品，与 USC 和 USC 学生会没有官方关联。
+---
 
-## 架构总览
+## What it does
+
+**Students** sign in and get agents without asking anyone for access:
+
+- `/me/agents` — per club, the agents that club exposes to them, each with the reason it is open
+  to them ("All members", "Treasurer", "All students").
+- `/directory` — every club's public agents, open to any signed-in student, no membership needed.
+
+**Clubs** run their own agents and decide who may use them:
+
+- `/org/[orgId]` — club home: my agents here, recent documents, my usage this month.
+- `/org/[orgId]/catalog` — agents installed in, or available to, this club.
+- `/org/[orgId]/documents` — the document library, each document tagged with a tier.
+- `/org/[orgId]/preview` — "who can read what through this agent", before publishing it.
+- `/org/[orgId]/admin` — members, positions, succession, per-member quotas, installations.
+- `/org/[orgId]/audit` — every run and tool call in this club.
+
+**USG** governs the whole campus from one console:
+
+- `/usg/templates` — agent templates and versions; distribute to a cohort or to all clubs.
+- `/usg/clubs` — per-club quotas and club policy (which model classes, may it publish publicly).
+- `/usg/rule-packs` — versioned policy (funding caps, deadlines) that takes effect on the next run.
+- `/usg/integrations` — every connector, its current implementation and last sync.
+- `/usg/audit` — campus-wide audit, metadata only.
+
+## Architecture
 
 ```mermaid
 flowchart LR
-  subgraph users["使用者"]
-    student["学生端<br/>我的智能体、全校智能体目录"]
-    club["社团端<br/>智能体库、文档库、社团管理"]
-    usg["学生会后台<br/>模板、额度、规则包、对接面板"]
+  subgraph users["Users"]
+    student["Students<br/>my agents, campus directory"]
+    club["Clubs<br/>agent catalog, documents, admin"]
+    usg["USG<br/>templates, quotas, rule packs, integrations"]
   end
 
-  subgraph platform["TrojanOps 平台"]
-    gw["网关<br/>使用权 → 授权串 → 额度 → 审计"]
-    dist["组织与分发<br/>模板、版本、安装、受众、规则包"]
-    perm["文档与权限<br/>密级、授权串、行级安全"]
-    rt["智能体运行时<br/>现在：模拟；最后：真实模型"]
+  subgraph platform["TrojanOps platform"]
+    gw["Gateway<br/>audience → grants → quota → audit"]
+    dist["Orgs and distribution<br/>templates, versions, installations, audience, rule packs"]
+    perm["Documents and permissions<br/>tiers, grants, row-level security"]
+    rt["Agent runtime<br/>now: mock; last: real model"]
   end
 
-  subgraph school["学校现有系统"]
-    netid["NetID 登录"]
-    roster["EngageSC 社团名单"]
-    files["社团现有文档"]
+  subgraph school["Existing campus systems"]
+    netid["NetID login"]
+    roster["EngageSC club rosters"]
+    files["Club documents"]
     tag["Trojan AI Gateway"]
-    apps["EngageSC 经费申请"]
+    apps["EngageSC funding applications"]
   end
 
   student --> gw
@@ -48,140 +77,159 @@ flowchart LR
   rt -- ApplicationSink --> apps
 ```
 
-| 层 | 职责 |
+| Layer | Responsibility |
 |---|---|
-| 学校系统接入 | 每个对接点是一个接口：`IdentityProvider`、`RosterSource`、`DocumentSource`、`LLMProvider`、`ApplicationSink`。比赛中都接模拟实现，换成真实系统时平台其余部分不用改。学生会后台的对接面板列出每个接口当前的实现和最近一次同步。 |
-| 网关 | 每次智能体运行和工具调用的唯一入口。它是服务端模块，不是 Next.js 的 `middleware`，因为要在数据库事务里设置授权串，并按实际用量结算。 |
-| 组织与分发 | 学生会和社团都是组织。模板带版本，安装属于社团。受众（谁能用）和可读上限（最多读哪一级文档）分开声明。规则包带版本，发布后下一次运行就生效。 |
-| 文档与权限 | 文档属于社团，按密级打标，由触发器写入授权串。数据库按授权串和行级安全策略决定一次运行能读哪些文档。 |
-| 智能体运行时 | 现在只定接口 `AgentRuntime`。模拟实现不调用模型，只列出这次运行能读的文档；最后通过 `LLMProvider` 接入选定的模型。 |
+| Campus integration | Each touchpoint is one interface: `IdentityProvider`, `RosterSource`, `DocumentSource`, `LLMProvider`, `ApplicationSink`. All five ship as mock implementations; swapping in a real system changes nothing else. `/usg/integrations` shows each interface's current implementation and last sync. |
+| Gateway | The single entry point for every agent run and tool call. A server module, not Next.js `middleware`, because it sets the request's grants inside the database transaction and settles quota on actual usage. |
+| Orgs and distribution | USG and clubs are both orgs. Templates are versioned; installations belong to a club. Audience (who may use it) and max tier (how deep it may read) are declared separately. Rule packs are versioned and take effect on the next run. |
+| Documents and permissions | Documents belong to a club and carry a tier; a trigger writes their read grants. The database, through row-level security, decides what a given run can read. |
+| Agent runtime | Behind the `AgentRuntime` interface. The mock implementation calls no model and instead reports exactly which documents the run was allowed to read; the real one plugs into a model through `LLMProvider`. |
 
-### 智能体分发
+### How agents reach people
 
-| 方向 | 发布方 | 使用者 | 例子 |
+| Direction | Published by | Used by | Seeded example |
 |---|---|---|---|
-| 学生会 → 社团 | 学生会 | 每个社团的指定职位或全体成员 | 经费预检、活动筹办 |
-| 社团 → 本社团 | 社团 | 本社团成员或指定干部 | 换届交接、会议纪要 |
-| 社团 → 全校学生 | 社团 | 所有登录学生，包括非成员 | 招新问答、演出问答 |
+| USG → clubs | USG | named positions, or all members, in every club | `funding-precheck`, `event-planning` |
+| Club → own club | the club | its members, or named officers | `handoff`, meeting minutes Q&A |
+| Club → all students | the club | any signed-in student, members or not | `recruiting-qa` |
 
-学生从两个入口找到能用的智能体：
+Usage of a public agent is billed to the club that published it, and each student has a separate
+daily cap, so opening an agent to campus cannot drain a club's month in an afternoon.
 
-- **我的智能体**：按社团列出各社团向自己开放的智能体，并标出开放原因；
-- **全校智能体目录**：列出所有社团的公开智能体，不需要先加入社团。
+### How a run is governed
 
-公开智能体的用量记在发布它的社团账上，每个学生每天另有上限。
+1. Resolve the agent's effective config; reject if the template is retired or the installation is
+   disabled.
+2. Check the user is inside the agent's audience.
+3. Recompute the user's grants for the agent's org, then clamp them to the agent's max tier.
+4. Reserve quota against four ceilings — platform, billed club, installation, member — plus the
+   student daily cap for public agents. Any ceiling blocks the run **before** the runtime is called.
+5. Inside a database transaction, set the grants; row-level security lists the readable documents.
+6. Call the agent runtime.
+7. Write tools only produce a pending action; a human with the right position confirms it.
+8. Settle on actual usage, then write the run record and the audit entry.
 
-### 一次运行经过网关的步骤
+### Permission model
 
-1. 解析智能体的生效配置；模板已下架或安装已停用时拒绝。
-2. 检查使用者在智能体的受众内。
-3. 按智能体所属的社团重算使用者的授权串，再按可读上限截断。
-4. 预留额度：检查平台、记账社团、安装、成员四层上限，公开智能体另查学生每日上限。任何一层超限都直接拦截，不调用运行时。
-5. 在数据库事务里设置授权串，由行级安全策略列出可读文档。
-6. 调用智能体运行时。
-7. 写入类工具只生成待确认的动作，由有权限的人确认后执行。
-8. 按实际用量结算，写运行记录和审计。
+A grant is a string that says "which people in which org":
 
-### 权限模型
+- `*` — every signed-in student;
+- `<org>:*` — every member of that club;
+- `<org>:<position>` — a named position in that club (officer-tier documents always include the
+  president).
 
-授权串把“哪个社团的什么人”写成字符串：
+A user's grants are recomputed on every request from live memberships in the active org — never
+stored in a cookie or a token, never carrying positions held in another club. They are then clamped
+by the agent's max tier: `public` keeps only `*`, `members` keeps up to `<org>:*`, `officers` keeps
+the lot.
 
-- `*`：所有登录学生；
-- `<社团>:*`：本社团全体成员；
-- `<社团>:<职位>`：本社团的指定职位。
+A document is readable only if **both** hold:
 
-文档的授权串由它的密级决定，干部级文档始终包含主席。使用者的授权串在每次运行时按智能体所属的社团重算，再按可读上限截断：上限为公开时只保留 `*`，上限为成员时保留到 `<社团>:*`。
+- its read grants intersect the run's clamped grants, and
+- it is inside the agent's declared sources.
 
-一份文档可读，需要同时满足两个条件：
+A public agent's max tier is always `public`, which is why a club can open an agent to all of USC
+without leaking its own minutes or budget.
 
-- 文档的授权串和截断后的授权串有交集；
-- 文档在智能体的知识源内。
+## Demo walkthrough
 
-公开智能体的可读上限固定为公开，社团对外开放智能体时，内部资料因此不会流出去。
+Eight beats. Each one runs the real platform logic; the agent itself answers through the mock
+runtime.
 
-### 技术栈
+| # | Beat | What to look at |
+|---|---|---|
+| D1 | Integration panel | `/usg/integrations` lists the five connectors with their last sync. "Sync roster" imports Robotics Club from `db/seed/roster.csv` and provisions it with the templates already distributed; existing clubs report 0 changes. |
+| D2 | USG distributes | Avery distributes `event-planning` to every club; it appears in all five catalogs. A club's attempt to raise it to a richer model class is rejected with the cap named, and logged as `installation.rejected`. |
+| D3 | Club publishes to campus | Startup's `recruiting-qa` starts disabled. Sam publishes it to all students; the confirmation states who gains access and the installation's budget. Lee, who is in no club, opens it from `/directory` and the inspector lists Startup's public documents only. |
+| D4 | Internal vs public scope | Casey sees `handoff` (All members) and `recruiting-qa` (All students); Taylor also sees `funding-precheck` (Treasurer). The preview of `handoff` shows minutes allowed for a member but the budget "Not granted", and both for a treasurer. |
+| D5 | Quota | Sam sets Casey's limit to $0.00 and Casey's next run is blocked before the runtime is called. Lee runs the public agent once, billed to Startup, and the next run hits the student daily cap. |
+| D6 | Rule pack update | Avery publishes `usg-funding` v2 (annual cap $8,000 → $10,000); the next `funding-precheck` run in any club reports the new cap and the new version. |
+| D7 | Succession | Sam transfers treasurer from Taylor to Jordan. Taylor's agent list drops `funding-precheck`, Jordan's gains it, and no installation or document changes. |
+| D8 | Audit | Every beat above is in the log, the rejected widening included. The USG view shows metadata only; a document the viewer cannot read shows as "Restricted document". |
 
-- Next.js（App Router）、TypeScript、pnpm
-- Tailwind CSS、shadcn/ui
-- PostgreSQL 17（`pgvector/pgvector:pg17` 镜像）、Drizzle ORM
-- Zod、Vitest
+Acceptance checks for each beat: `docs/architecture.md` §1.
 
-## 演示流程
+### Demo accounts
 
-演示分八步，每一步都运行真实的平台逻辑，智能体通过模拟运行时回答：
+With `DEMO_MODE=1`, `/` is a demo sign-in page. The sign-in ID can be a role alias and the password
+is `fighton` for everyone:
 
-1. 对接面板与名单同步
-2. 学生会分发模板
-3. 社团发布公开智能体
-4. 内部与公开的权限差别
-5. 额度拦截
-6. 规则包更新
-7. 换届移交
-8. 审计
-
-每一步的验收标准见 `docs/architecture.md` §1。
-
-## 仓库结构
-
-| 路径 | 内容 |
-|---|---|
-| `AGENTS.md` | 所有智能体共用的规则：每条工作流能改哪些路径、第 2 小时冻结的接口、不变量、每个桩代码的合入时间和完成时间 |
-| `CLAUDE.md` | 引用 `AGENTS.md`，列出可用的子智能体，要求每个任务先出方案再改代码 |
-| `docs/architecture.md` | 完整规格：演示步骤、数据模型、接口、网关、页面和工作包 |
-| `docs/streams/` | 每条工作流一份任务说明：工作包和时间、要交出的接口、要用别人的接口、第一条提示词 |
-| `docs/workflow.md` | 分支、PR、接口变更流程、完成标准 |
-| `docs/decisions.md` | 已经定下的决定 |
-| `.claude/agents/` | 每条工作流一个子智能体，另有 `ui-designer` 和 `reviewer` |
-| `.github/pull_request_template.md` | PR 模板 |
-
-代码目录的布局和每个路径的归属见 `docs/architecture.md` §4。团队版架构文档和页面清单在 Claude 文档里，链接在团队群。
-
-## 分工
-
-| 工作流 | 负责人 | 工作包 | 交付 |
+| # | Alias | Persona | Lands on |
 |---|---|---|---|
-| A 平台核心 | 待定 | WP-0（牵头）、WP-1、WP-3、WP-4、WP-13 | 项目骨架、表与行级安全、身份与授权串、网关；最后接入模型 |
-| B 分发 | 待定 | WP-5、WP-7、WP-6 | 分发引擎、社团端页面与换届移交、学生会控制台 |
-| C 文档与权限 | 待定 | WP-8、WP-9、WP-14 | 文档库、运行页与检查面板、权限预览、审计视图；最后做检索与工具 |
-| D 对接与演示 | 待定 | WP-2、WP-10、WP-11、WP-12 | 种子数据与界面骨架、对接层与对接面板、学生端、演示与路演 |
+| 1 | `admin` | Avery, USG admin | `/usg/integrations` |
+| 2 | `president` | Sam, Startup president | Startup club home |
+| 3 | `treasurer` | Taylor, Startup treasurer | `/me/agents` |
+| 4 | `successor` | Jordan, incoming treasurer | `/me/agents` |
+| 5 | `member` | Casey, Startup member | `/me/agents` |
+| 6 | `student` | Lee, no club | `/directory` |
+| 7 | `multi` | Morgan, Archery treasurer + Startup member | `/me/agents` |
+| 8 | `reviewer` | Riley, USG reviewer | `/me/agents` |
 
-| 时间 | 检查点 |
-|---|---|
-| H2 | 冻结接口和表结构 |
-| H3 | 每条工作流把别人要用的接口以桩代码合入 `main` |
-| H8 | 每个页面都能显示种子数据，`main` 上 `pnpm check` 通过 |
-| H12 | 冻结平台功能，八个演示步骤在模拟运行时上全部跑通 |
-| H14 | 接入最小的真实智能体；做不到就整场用模拟运行时 |
-| H18 | 完成三次彩排 |
+The original demo emails (`sam@demo.trojanops.test`) and NetIDs (`sam`) work too. `/?account=N`
+prefills account N — on stage, open the link and click Sign in; it also switches personas while
+signed in. `/demo` controls the demo clock and shows the reset command.
 
-## 本地环境
+## Stack
 
-需要 Node.js 22 以上、pnpm 12 和 Docker Desktop。
+- Next.js 16 (App Router), React 19, TypeScript, pnpm
+- Tailwind CSS v4, shadcn/ui, TanStack Table
+- PostgreSQL 17 (`pgvector/pgvector:pg17`), Drizzle ORM, row-level security
+- Zod, Vitest
+
+## Run it locally
+
+Needs Node.js 22+, pnpm 12 and Docker Desktop.
 
 ```bash
-npm i -g pnpm@12.18.0     # 没有 pnpm 时
+npm i -g pnpm@12.18.0     # if you don't have pnpm
 pnpm install
 cp .env.example .env
-pnpm db:up                # 启动 PostgreSQL 17
-pnpm db:reset             # 建表、行级安全、种子数据；可以反复运行
+pnpm db:up                # PostgreSQL 17 in Docker
+pnpm db:reset             # tables, roles, RLS, seed data; safe to re-run
 pnpm dev                  # http://localhost:3000
-pnpm check                # 类型检查、lint、测试、不变量和设计检查
+pnpm check                # typecheck, lint, tests, invariant and design greps
 ```
 
-Windows 上不需要 bash：`pnpm check` 是 Node 脚本（需要 Node 20.12 或更高）；数据库用 Docker Desktop 启动。
+The app connects as `trojanops_app`, a role with neither ownership nor `BYPASSRLS`, so row-level
+security applies to every query the app makes. `DATABASE_OWNER_URL` is used only by `pnpm db:reset`
+on the CLI, never by a route.
 
-应用以 `trojanops_app` 角色连接数据库，行级安全对它生效。`DATABASE_OWNER_URL` 只给 `pnpm db:reset` 用。
+No bash needed on Windows: `pnpm check` is a Node script, and the database runs in Docker Desktop.
 
-`DEMO_MODE=1` 时，`/` 是演示登录页。登录 ID 可以按角色填写：`admin`、`president`、`treasurer`、`successor`、`member`、`student`、`multi`、`reviewer`，密码统一是 `fighton`。原演示邮箱（如 `sam@demo.trojanops.test`）和 NetID（`sam`）也可使用。登录后按角色进入不同页面：USG 管理员进 `/usg/integrations`，社长进社团首页，其他成员进 `/me/agents`，没有社团的学生进 `/directory`。
+## Status
 
-打开登录页默认预填 `admin` / `fighton`。演示时用 `/?account=N` 直接预填第 N 个账号，点 Sign in 即可：1 admin（Avery，USG 管理员）、2 president（Sam，Startup 社长）、3 treasurer（Taylor，Startup 财务）、4 successor（Jordan，接任人）、5 member（Casey，Startup 成员）、6 student（Lee，无社团）、7 multi（Morgan，Archery 财务 + Startup 成员）、8 reviewer（Riley，USG 审核员）。已登录时也可以用这个链接直接换人。
+- **Working end to end:** identity and grants, distribution (templates, versions, installations,
+  audience, rule packs), document tiers with RLS, the gateway (audience, grant clamp, four-level
+  quota, pending actions, audit), succession, roster import, the run inspector, and all 18 pages
+  with seeded data. 25 API routes, 40 test files.
+- **Mock, by design:** the agent runtime (`src/lib/runtime/mock.ts`) reports the documents a run may
+  read instead of calling a model, and all five connectors are mock implementations behind their
+  real interfaces (`src/lib/connectors/registry.ts`). `AGENT_RUNTIME` and the `CONNECTOR_*` env vars
+  select the implementation at startup.
+- **Not built yet:** real model calls, retrieval and agent-specific tools (WP-13/WP-14,
+  `docs/architecture.md` §17), real USC integrations, mobile layout, production deploy.
 
-## 开始工作
+## Repo map
 
-1. 认领一条工作流，读 `docs/streams/<工作流>.md`。
-2. 把文件末尾的第一条提示词交给 Claude Code，确认它给出的方案后再改代码。
-3. 每个工作包开一个分支，命名为 `<工作流>/<工作包>-<主题>`，例如 `b/wp5-distribute`。
-4. 只改自己工作流的路径。别人的模块还没做完时，直接导入它在真实路径上的桩代码，不自己写替代品。
-5. 开 PR 前运行 `reviewer` 子智能体和 `pnpm check`，变基到 `main` 后压缩合并。
+| Path | Contents |
+|---|---|
+| `src/app` | Next.js App Router: 18 pages and 25 API routes |
+| `src/lib/gateway` | the run path: audience, quota, pending actions, audit |
+| `src/lib/distribution` | templates, versions, installations, catalog, directory, rule packs |
+| `src/lib/documents` | document access, preview, library, audit views |
+| `src/lib/identity`, `src/lib/authz` | actors, memberships, grant computation and clamping |
+| `src/lib/connectors` | the five campus interfaces and their mock implementations |
+| `src/lib/db` | Drizzle schema, client, `withActor` |
+| `db/` | migrations (tables, roles, RLS, triggers) and seed data |
+| `tests/` | Vitest unit and database integration tests |
+| `docs/architecture.md` | the spec: demo beats, invariants, data model, contracts, gateway, routes |
+| `docs/workflow.md`, `docs/decisions.md`, `docs/streams/` | how the team worked and what it decided |
+| `AGENTS.md`, `CLAUDE.md` | rules for the coding agents: path ownership, frozen contracts, invariants |
 
-分支、PR 和接口变更的完整规则见 `docs/workflow.md`。
+The project was built by four people in parallel across four streams — platform core, distribution,
+documents and permissions, integration and demo — each owning a fixed set of paths, with the shared
+contracts frozen two hours in. `AGENTS.md` has the ownership table and the rules.
+
+## Team
+
+Ivan Sun · Jingming Yang · Xinrui Wang · Yu Xia
