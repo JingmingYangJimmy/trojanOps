@@ -13,7 +13,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "check": "bash scripts/check.sh"
+    "check": "tsx scripts/check.ts"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
