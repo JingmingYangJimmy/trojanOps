@@ -49,7 +49,7 @@ Every screen uses real seed data (club names, document titles); never lorem ipsu
 
 ## App shell
 
-- **Masthead:** 48px, Cardinal background, white text.
+- **Masthead:** 56px, Cardinal background, white text: 20px bold wordmark, 16px scope links and account menu.
   - Left: "TrojanOps" wordmark, then a scope switcher: My agents · Directory · Club: <name> · USG
     admin. The active scope gets a 2px Gold underline.
   - Right: persona switcher (`DEMO_MODE`), account.

@@ -31,6 +31,6 @@ export default async function PublicAgentPage({ params }: { readonly params: Pro
   return <>
     <Link href={`/directory/clubs/${agent.orgId}?tab=agents`} className="mb-4 inline-flex min-h-8 items-center text-primary underline underline-offset-4">Back to {agent.orgName}</Link>
     <RunWorkspace key={`${actor.userId}:${actor.activeOrgId}:${agent.installationId}`} installationId={agent.installationId} agentName={agent.name}
-      config={data.workspace} header={{ source: agent.orgName, version: agent.templateVersion, tags: agentTags(agent.templateSlug), description: agent.purpose }} headerSpacePx={144} />
+      config={data.workspace} header={{ source: agent.orgName, version: agent.templateVersion, tags: agentTags(agent.templateSlug), description: agent.purpose }} headerSpacePx={152} />
   </>;
 }

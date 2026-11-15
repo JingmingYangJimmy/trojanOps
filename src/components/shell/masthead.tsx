@@ -58,16 +58,16 @@ export function Masthead({ scopes, signedIn, currentUserId, activeOrgId, demoMod
   }
 
   return <>
-    <header className="flex h-12 shrink-0 items-stretch bg-primary text-primary-foreground [&_a:focus-visible]:outline-primary-foreground [&_button:focus-visible]:outline-primary-foreground">
-      <Link href="/" className="flex shrink-0 items-center px-3 text-base font-bold tracking-tight sm:px-6">TrojanOps</Link>
+    <header className="flex h-14 shrink-0 items-stretch bg-primary text-primary-foreground [&_a:focus-visible]:outline-primary-foreground [&_button:focus-visible]:outline-primary-foreground">
+      <Link href="/" className="flex shrink-0 items-center px-3 text-xl font-bold tracking-tight sm:px-6">TrojanOps</Link>
       <ScopeLinks scopes={scopes} />
       <div className="ml-auto flex min-w-0 shrink-0 items-center px-3 sm:px-6">
         {signedIn ? <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button type="button" disabled={pending} aria-busy={pending} aria-label={demoMode ? `Persona: ${accountLabel}` : accountLabel}
-              className="flex h-9 items-center gap-2 rounded-md px-2 hover:bg-primary-hover disabled:cursor-wait">
-              <User aria-hidden="true" className="size-4 shrink-0" />
-              <span className="max-w-32 truncate">{demoMode && currentName ? `Persona: ${currentName}` : accountLabel}</span>
+              className="flex h-10 items-center gap-2 rounded-md px-2 text-base font-medium hover:bg-primary-hover disabled:cursor-wait">
+              <User aria-hidden="true" className="size-5 shrink-0" />
+              <span className="max-w-40 truncate">{demoMode && currentName ? `Persona: ${currentName}` : accountLabel}</span>
               <ChevronDown aria-hidden="true" className="size-4 shrink-0" />
             </button>
           </DropdownMenuTrigger>
@@ -93,7 +93,7 @@ export function Masthead({ scopes, signedIn, currentUserId, activeOrgId, demoMod
             {(demoMode || clubs.length > 1) && <DropdownMenuSeparator />}
             <DropdownMenuItem onSelect={() => change({ kind: 'persona', userId: null })}>Sign out</DropdownMenuItem>
           </DropdownMenuContent>
-        </DropdownMenu> : <Link href="/" className="flex h-9 items-center gap-2 rounded-md px-2 hover:bg-primary-hover"><User aria-hidden="true" className="size-4" />Sign in</Link>}
+        </DropdownMenu> : <Link href="/" className="flex h-10 items-center gap-2 rounded-md px-2 text-base font-medium hover:bg-primary-hover"><User aria-hidden="true" className="size-5" />Sign in</Link>}
       </div>
     </header>
     <p aria-live="polite" className="sr-only">{status}</p>

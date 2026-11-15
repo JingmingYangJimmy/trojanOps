@@ -16,8 +16,8 @@ export function ScopeLinks({ scopes }: { scopes: Scope[] }) {
         return (
           <Link key={s.href} href={s.href} aria-current={active ? 'page' : undefined}
             className={cn(
-              'flex shrink-0 items-center whitespace-nowrap border-b-2 px-3 text-primary-foreground hover:bg-primary-hover',
-              active ? 'border-gold font-semibold' : 'border-transparent',
+              'flex shrink-0 items-center whitespace-nowrap border-b-[3px] px-4 text-base text-primary-foreground hover:bg-primary-hover',
+              active ? 'border-gold font-semibold' : 'border-transparent font-medium',
             )}>
             {s.label}
           </Link>

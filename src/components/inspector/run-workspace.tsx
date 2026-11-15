@@ -35,7 +35,7 @@ export function RunErrorBanner({ error, onDismiss }: { readonly error: ApiError;
   return <div role="alert" className="mb-3 flex flex-wrap items-start gap-2 rounded-md border border-primary bg-background px-4 py-3"><AlertCircle aria-hidden className="mt-0.5 size-4 shrink-0 text-primary" /><p className="min-w-0 flex-1">{error.message}{error.code === 'unauthenticated' && <>{' '}<Link href="/" className="text-primary underline">Choose a persona</Link></>}</p><Button type="button" variant="ghost" onClick={onDismiss}>Dismiss</Button></div>;
 }
 
-export function RunWorkspace({ installationId, agentName, config, header, fill = false, headerSpacePx = 96 }: RunWorkspaceProps) {
+export function RunWorkspace({ installationId, agentName, config, header, fill = false, headerSpacePx = 104 }: RunWorkspaceProps) {
   const frameStyle: (CSSProperties & { readonly '--workspace-height': string }) | undefined = fill ? undefined : { '--workspace-height': `max(480px, calc(100dvh - ${headerSpacePx}px))` };
   const [state, dispatch] = useReducer(runReducer, initialRunState);
   const [context, setContext] = useState(config);
