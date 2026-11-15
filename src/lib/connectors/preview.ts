@@ -3,12 +3,12 @@ import { desc, eq } from 'drizzle-orm';
 import type { Actor, ConnectorKind, LibraryDocument } from '@/lib/contracts';
 import { getDb } from '@/lib/db/client';
 import { agentRunsMeta, orgs, sources, users } from '@/lib/db/schema';
-import { listPersonas } from '@/lib/identity';
 import { listLibraryDocuments } from '@/lib/documents/library';
 import { requireRosterAdmin } from '@/lib/lifecycle/import';
 import { connectorImplementation, getConnectors } from './registry';
 import { listInternalSubmissionMetadata } from './applications/mock';
 import { buildRosterPreview } from './roster/preview';
+import { currentIdentityMembershipPreview } from './identity/member-status';
 
 export type ConnectorPreview = {
   kind: ConnectorKind; title: string; source: string; description: string; summary: string;
@@ -41,16 +41,13 @@ type Dataset = Pick<ConnectorPreview, 'source' | 'description' | 'summary' | 'co
 async function dataset(actor: Actor, kind: ConnectorKind): Promise<Dataset> {
   switch (kind) {
     case 'identity': {
-      const people = await listPersonas();
-      const clubIds = new Set(people.flatMap(person => person.clubs.map(club => club.orgId)));
+      const membershipPreview = await currentIdentityMembershipPreview();
       return {
-        source: 'Current platform accounts and active memberships',
-        description: 'Current account and membership metadata, presented as a CSV table.',
-        summary: `The platform currently has ${people.length} accounts with memberships across ${clubIds.size} organizations. Each row links an account to an organization and its current positions; accounts without a club are included.`,
-        columns: ['Person', 'Organization', 'Positions'],
-        rows: people.flatMap(person => person.clubs.length
-          ? person.clubs.map(club => [person.name, club.orgName, club.positionNames.join('; ')])
-          : [[person.name, 'No organization', 'No positions']]),
+        source: 'Current platform accounts and membership history',
+        description: 'Membership status is shown separately for each person and organization.',
+        summary: membershipPreview.summary,
+        columns: ['Person', 'Organization', 'Positions', 'Member status', 'Left on (UTC)'],
+        rows: membershipPreview.rows,
       };
     }
     case 'roster': {

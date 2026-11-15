@@ -99,7 +99,11 @@ the summary uses local text and current counts, not a model call. Back returns t
 
 The datasets are actual current platform data, not fabricated CSV fixtures:
 
-- Identity: the identity service's accounts and active organization/position memberships.
+- Identity: current accounts and membership history, grouped by person and organization. Any
+  remaining active position means **Active member**; only ended positions means **Left
+  organization**. Ending one office does not count as leaving while another position remains
+  active. The table includes the last departure date for former memberships, and the summary
+  counts current and former person–organization relationships separately.
 - Roster: `RosterSource.fetch()` reads the current `db/seed/roster.csv`; source identifiers are
   stripped, and counts distinguish people from multiple position rows.
 - Documents: C's document-library service recomputes grants and enforces RLS for each library.
@@ -119,3 +123,10 @@ remain separate actions on the overview; no new API route, contract or schema is
 `tests/connector-preview.test.ts` covers query selection, authorization, actual current accounts,
 roster failure isolation, RLS-filtered document metadata, private run-content exclusion and
 submission-reference projection. `tests/roster-preview.test.ts` covers accurate source counts.
+
+The persona seed includes two ended membership examples: Lee formerly belonged to Dance Club;
+Casey formerly belonged to Archery Club and remains a Startup Club member. These historical rows
+do not change the active persona memberships or imported roster baseline and grant no access.
+`tests/member-status.test.ts` covers club departure versus office changes, rejoining, departure
+dates, identical display names and accounts without history. Seed acceptance also verifies the
+historical examples and unchanged active memberships.

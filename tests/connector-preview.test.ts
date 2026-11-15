@@ -2,7 +2,10 @@ import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { eq, sql } from 'drizzle-orm';
 import { connectorKind, loadConnectorPreview } from '@/lib/connectors/preview';
 import { getConnectors } from '@/lib/connectors/registry';
-import { users } from '@/lib/db/schema';
+import { memberships, users } from '@/lib/db/schema';
+import { grantsFor } from '@/lib/authz';
+import { now } from '@/lib/clock';
+import { departedMembershipSeeds } from '@db/seed/personas';
 import { withActor } from '@/lib/db/with-actor';
 import { INSTALLATION, ORG, USER } from '@db/seed/ids';
 import { actorFor, appSql, closeAppDb, ensureDocumentFixture, inRolledBackApp, ts } from './db';
@@ -38,10 +41,25 @@ describe.skipIf(!probe)('current connector CSV projections', () => {
       const preview = await loadConnectorPreview(await actorFor(USER.avery, ORG.usg), 'identity');
       expect(preview.status).toBe('ready');
       if (preview.status !== 'ready') return;
-      expect(preview.data.columns).toEqual(['Person', 'Organization', 'Positions']);
+      expect(preview.data.columns).toEqual(['Person', 'Organization', 'Positions', 'Member status', 'Left on (UTC)']);
       expect(preview.data.rows.some(row => row[0] === 'Current account name' && row[1] === 'Startup Club')).toBe(true);
       expect(JSON.stringify(preview)).not.toContain(USER.sam);
       expect(preview.data.isDemo).toBe(true); // Summary only; rows are actual platform data.
+    });
+  });
+
+  it('reports leaving one club separately from membership in another, without restoring access', async () => {
+    await inRolledBackApp(async tx => {
+      await tx.insert(memberships).values(departedMembershipSeeds(now()));
+      const preview = await loadConnectorPreview(await actorFor(USER.avery, ORG.usg), 'identity');
+      expect(preview.status).toBe('ready');
+      if (preview.status !== 'ready') return;
+      const casey = preview.data.rows.filter(row => row[0] === 'Casey');
+      expect(casey.find(row => row[1] === 'Startup Club')?.[3]).toBe('Active member');
+      expect(casey.find(row => row[1] === 'Archery Club')?.[3]).toBe('Left organization');
+      expect(casey.find(row => row[1] === 'Archery Club')?.[4]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(await grantsFor(USER.casey, ORG.archery)).toEqual(['*']);
+      expect((await actorFor(USER.lee, null)).positions).toEqual([]);
     });
   });
 
