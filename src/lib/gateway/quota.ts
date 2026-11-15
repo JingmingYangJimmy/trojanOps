@@ -62,7 +62,7 @@ function keyConditions(t: QuotaTarget): SQL[] {
   return c;
 }
 
-async function limitRow(tx: Tx, t: QuotaTarget): Promise<{ id: string; limitMicro: number } | null> {
+async function limitRow(tx: Pick<Db, 'select'>, t: QuotaTarget): Promise<{ id: string; limitMicro: number } | null> {
   const [row] = await tx.select({ id: quotaLimits.id, limitMicro: quotaLimits.limitMicro })
     .from(quotaLimits)
     .where(and(...keyConditions(t)))
@@ -72,8 +72,8 @@ async function limitRow(tx: Tx, t: QuotaTarget): Promise<{ id: string; limitMicr
 }
 
 /** A level's own limit in micro-USD, or null when it has no row (a member or installation then
- * inherits the club's limit, §11). Reads inside the caller's transaction. */
-export async function ownLimitMicro(tx: Tx, target: QuotaTarget): Promise<number | null> {
+ * inherits the club's limit, §11). Reads inside the caller's transaction, or outside one. */
+export async function ownLimitMicro(tx: Pick<Db, 'select'>, target: QuotaTarget): Promise<number | null> {
   const t = normalize(target);
   requireFields(t);
   return (await limitRow(tx, t))?.limitMicro ?? null;

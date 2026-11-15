@@ -4,7 +4,7 @@ import { requireUser } from '../api';
 import { isUuid, isUsgAdmin } from '../authz';
 import { now } from '../clock';
 import { AppError, type Actor, type AuditAction, type AuditEvent } from '../contracts';
-import { getDb, type Tx } from '../db/client';
+import { getDb, type Db, type Tx } from '../db/client';
 import { agentInstallations, agentTemplates, agentTemplateVersions, orgs, positions, quotaLimits, sources, usgClubPolicy } from '../db/schema';
 import { audit } from '../gateway/audit';
 import { lockQuota, ownLimitMicro } from '../gateway/quota';
@@ -67,6 +67,12 @@ export async function versionFor(tx: Tx, template: Template, installation?: Pick
 export async function clubBudget(tx: Tx, orgId: string): Promise<number> {
   return (await ownLimitMicro(tx, { scope: 'org', orgId })) ?? 0;
 }
+/** An installation's own limit, as opposed to the club limit `remaining()` falls back to when it
+ * has none. Null when it has no row of its own, which is what both the publish default and the
+ * catalog's budget figure turn on. */
+export const ownInstallationLimit = (db: Db | Tx, installationId: string) =>
+  ownLimitMicro(db, { scope: 'installation', installationId });
+
 export async function clampWrite(tx: Tx, orgId: string, version: ClampInput['version'], installation: ClampInput['installation']) {
   const [policy] = await tx.select().from(usgClubPolicy).where(eq(usgClubPolicy.orgId, orgId));
   const held = await tx.select().from(positions).where(eq(positions.orgId, orgId));

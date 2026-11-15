@@ -5,9 +5,9 @@ import { isUuid } from '../authz';
 import { AppError, type Actor, type EffectiveAgent } from '../contracts';
 import { getDb, type Tx } from '../db/client';
 import { agentInstallations } from '../db/schema';
-import { ownLimitMicro, setLimit } from '../gateway/quota';
+import { setLimit } from '../gateway/quota';
 import { effectiveAgent } from './effective-config';
-import { active, audited, checkedWrite, clampWrite, ensurePublicBudget, clubBudget, invalid, lockClub, lockTemplate, missing, president, versionFor, type Installation, type Template } from './write-support';
+import { active, audited, checkedWrite, clampWrite, ensurePublicBudget, clubBudget, invalid, lockClub, lockTemplate, missing, president, versionFor, ownInstallationLimit, type Installation, type Template } from './write-support';
 
 export const installationPatchSchema = z.object({
   enabled: z.boolean().optional(), track: z.enum(['latest', 'pinned']).optional(), pinnedVersion: z.number().int().positive().nullable().optional(),
@@ -113,11 +113,6 @@ export async function writeInstallation(
 
 /** Enabled and open to every signed-in student — the state Publish to all students owns. */
 const reachesCampus = (enabled: boolean, audience: string) => enabled && audience === 'public';
-
-/** The installation's own limit, as opposed to the club limit it falls back to; null when it has
- * no row of its own. */
-const ownInstallationLimit = (tx: Tx, installationId: string) =>
-  ownLimitMicro(tx, { scope: 'installation', installationId });
 
 /** Was this installation already on the campus directory before the patch? Clamped the same way a
  * read would clamp it, so a row the clamps now refuse counts as not public and the patch is
