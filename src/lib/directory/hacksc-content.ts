@@ -10,26 +10,11 @@ export const HACKSC_CONTENT: ClubContent = {
   categories: ['Technology', 'Engineering'],
   contactEmail: 'hacksc@demo.trojanops.test',
   meets: 'Thursdays, 6:00 PM, Ronald Tutor Campus Center',
-  departments: [
-    {
-      slug: 'events', name: 'Events', lead: 'sam', members: ['sam', 'jordan'],
-      purpose: 'Owns venue reservations, the organizer checklist and the event run of show.',
-      about: ['Events turns the previous team’s handoff into a reservation checklist, named owners and a rehearsal before doors open.'],
-      budget: { lines: [{ label: 'Venue and operations', amountUsd: 1800 }], committedUsd: 0 },
-    },
-    {
-      slug: 'finance', name: 'Finance', lead: 'taylor', members: ['taylor'],
-      purpose: 'Tracks approvals and expenses; financial documents remain limited to authorized officers.',
-      about: ['Finance prepares funding requests and reconciles receipts. Department membership alone does not grant access to financial documents.'],
-      budget: { lines: [{ label: 'Finance contingency', amountUsd: 400 }], committedUsd: 0 },
-    },
-    {
-      slug: 'participant-experience', name: 'Participant experience', lead: 'casey', members: ['casey', 'jordan'],
-      purpose: 'Coordinates registration, check-in volunteers and separate help queues.',
-      about: ['Participant experience practices the arrival flow with Events and documents issues for the next team.'],
-      budget: { lines: [{ label: 'Signage and check-in supplies', amountUsd: 200 }], committedUsd: 0 },
-    },
-  ],
+  budgets: {
+    events: { lines: [{ label: 'Venue and operations', amountUsd: 1800 }], committedUsd: 0 },
+    finance: { lines: [{ label: 'Finance contingency', amountUsd: 400 }], committedUsd: 0 },
+    'participant-experience': { lines: [{ label: 'Signage and check-in supplies', amountUsd: 200 }], committedUsd: 0 },
+  },
   events: [
     {
       id: 'hacksc-handoff-workshop', title: 'Organizer handoff workshop',

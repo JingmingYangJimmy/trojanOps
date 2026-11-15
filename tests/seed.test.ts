@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { seed, type SeedDb } from '@db/seed';
 import { seedOrgs } from '@db/seed/orgs';
 import { seedPersonas } from '@db/seed/personas';
+import { seedDepartments } from '@db/seed/departments';
 import { ORG, USER } from '@db/seed/ids';
 import { parseRosterCsv } from '@/lib/connectors/roster/mock';
 
@@ -99,6 +100,20 @@ describe('WP-2 seed', () => {
     expect([...new Set(roster.filter((r) => !existing.includes(r)).map((r) => r.orgSlug))]).toEqual(['robotics']);
   });
 
+  it('puts only active members of a club on its departments, with each lead on the team', async () => {
+    const { rows, db } = capture();
+    await seedOrgs(db);
+    await seedPersonas(db);
+    await seedDepartments(db);
+    const active = new Set(rows.memberships.filter((m) => !m.endedAt).map((m) => `${m.orgId}:${m.userId}`));
+    for (const d of rows.departments) {
+      const team = rows.department_members.filter((m) => m.departmentId === d.id).map((m) => m.userId);
+      expect(team.every((userId) => active.has(`${d.orgId}:${userId}`))).toBe(true);
+      if (d.leadUserId) expect(team).toContain(d.leadUserId);
+    }
+    expect(rows.departments.filter((d) => d.orgId === ORG.startup).map((d) => d.slug)).toEqual(['events', 'finance', 'marketing']);
+  });
+
   it('runs all area seeds in one transaction and in dependency order', async () => {
     const tx = capture().db;
     const transaction = vi.fn(async (fn: (db: SeedDb) => Promise<void>) => fn(tx));
@@ -107,7 +122,7 @@ describe('WP-2 seed', () => {
     expect(transaction).toHaveBeenCalledOnce();
     expect(calls).toEqual([
       'orgs', 'org_cohorts', 'positions', 'users', 'roster_state', 'memberships',
-      'distribution', 'documents', 'quota',
+      'departments', 'department_members', 'distribution', 'documents', 'quota',
     ]);
   });
 

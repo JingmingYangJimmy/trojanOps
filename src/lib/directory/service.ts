@@ -1,23 +1,24 @@
 // Owner: D (WP-11). The org directory (§14): clubs for USG and for students, a club's departments
-// for its members. Real orgs, people, memberships, quotas, policies and public agents, joined to
-// the demo content in `content.ts` (profiles, departments, events, updates).
+// for its members. Real orgs, people, memberships, departments, quotas, policies and public agents,
+// joined to the demo content in `content.ts` (profiles, department budgets, events, updates). The
+// president's department writes are in `departments.ts`.
 //
 // Who sees what is decided here, not in the pages. A student outside a club gets the public
 // profile: officers, events without their department or funding, public updates by officers or the
 // club, and public agents. The club's members and USG also get the roster, the departments, every
 // update and each event's department and funding. USG also gets quota, policy and the funding
 // totals. Only the president acting in the club gets department budgets.
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { requireUser } from '@/lib/api';
 import { allActiveMemberships, isUsgAdmin, isUuid } from '@/lib/authz';
 import { now } from '@/lib/clock';
 import { AppError, type Actor } from '@/lib/contracts';
 import { getDb } from '@/lib/db/client';
-import { orgCohorts, orgs, positions, usgClubPolicy } from '@/lib/db/schema';
+import { departmentMembers, departments as departmentsTable, orgCohorts, orgs, positions, usgClubPolicy } from '@/lib/db/schema';
 import { directory } from '@/lib/distribution';
 import { latestPublishedPack, loadAgents } from '@/lib/distribution/queries';
 import { remaining } from '@/lib/gateway/quota';
-import { clubContent, type ClubContent, type DepartmentContent, type EventContent, type UpdateContent } from './content';
+import { clubContent, type BudgetContent, type ClubContent, type EventContent, type UpdateContent } from './content';
 import type {
   ClubDashboard, ClubOversight, ClubRow, ClubsDirectoryView, ClubSummary, DepartmentDashboard, DepartmentRow,
   DepartmentsDirectoryView, DirectoryEvent, DirectoryPerson, DirectoryUpdate, DirectoryViewer, FundingSummary, OfficerSeat, QuotaUse,
@@ -32,6 +33,8 @@ const SEAT_ORDER = ['president', 'vice-president', 'treasurer', 'secretary'];
 type Membership = Awaited<ReturnType<typeof allActiveMemberships>>[number];
 type Club = { id: string; slug: string; name: string; status: 'active' | 'inactive' };
 type FundingLimits = { capMicro: number; eventLimit: number };
+/** A live department as stored, with the ids of the people on it. */
+interface DepartmentRecord { id: string; slug: string; name: string; purpose: string; about: string[]; leadUserId: string | null; memberIds: string[] }
 
 // ---------------------------------------------------------------- landing
 
@@ -59,7 +62,8 @@ export async function clubsDirectory(actor: Actor): Promise<ClubsDirectoryView> 
   // In sequence: each quota read opens its own transaction (see `clubAdmin`).
   for (const club of clubs) {
     const content = clubContent(club.slug);
-    const events = content.events.map((e) => toEvent(e, content, at, true));
+    // Only the next event and the funding are read here, so no department names are needed.
+    const events = content.events.map((e) => toEvent(e, [], at, true));
     rows.push({
       ...summary(club, content, cohorts.get(club.id) ?? []),
       memberCount: rosterOf(people, club.id).length,
@@ -75,15 +79,15 @@ export async function clubDashboard(actor: Actor, orgId: string): Promise<ClubDa
   const userId = requireUser(actor);
   const club = await findClub(orgId);
   if (!club) return null;
-  const [people, publicAgents, cohorts, seats, usg, usgAdmin] = await Promise.all([
-    allActiveMemberships(), directory(), cohortsByOrg(), officerSeats(club.id), actsInUsg(actor), isUsgAdmin(actor),
+  const [people, publicAgents, cohorts, seats, usg, usgAdmin, depts] = await Promise.all([
+    allActiveMemberships(), directory(), cohortsByOrg(), officerSeats(club.id), actsInUsg(actor), isUsgAdmin(actor), departmentsOf(club.id),
   ]);
   const content = clubContent(club.slug);
   const roster = rosterOf(people, club.id);
   const viewer = viewerFor(actor, userId, club.id, roster, usg, usgAdmin);
   const insider = viewer.member || viewer.usg;
   const at = now();
-  const events = content.events.map((e) => toEvent(e, content, at, insider));
+  const events = content.events.map((e) => toEvent(e, depts, at, insider));
   const officerIds = new Set(roster.filter((p) => p.slugs.some((s) => seats.some((seat) => seat.slug === s))).map((p) => p.userId));
 
   return {
@@ -101,8 +105,8 @@ export async function clubDashboard(actor: Actor, orgId: string): Promise<ClubDa
     memberCount: roster.length,
     members: insider ? roster.map(({ userId: id, name, positions: held }) => ({ userId: id, name, positions: held })) : null,
     events,
-    updates: updatesFor(content.updates, content, roster, insider ? null : officerIds),
-    departments: insider ? content.departments.map((d) => departmentRow(d, content, roster, events, viewer)) : null,
+    updates: updatesFor(content.updates, depts, roster, insider ? null : officerIds),
+    departments: insider ? depts.map((d) => departmentRow(d, content, roster, events, viewer)) : null,
     publicAgents: publicAgents.filter((a) => a.orgId === club.id),
     oversight: usg ? await oversightOf(club.id, events, at) : null,
   };
@@ -115,15 +119,15 @@ export async function departmentsDirectory(actor: Actor): Promise<DepartmentsDir
   const userId = requireUser(actor);
   const club = await activeClub(actor);
   if (!club) return null;
-  const people = await allActiveMemberships();
+  const [people, depts] = await Promise.all([allActiveMemberships(), departmentsOf(club.id)]);
   const content = clubContent(club.slug);
   const roster = rosterOf(people, club.id);
   const viewer = viewerFor(actor, userId, club.id, roster, false, false);
-  const events = content.events.map((e) => toEvent(e, content, now(), true));
+  const events = content.events.map((e) => toEvent(e, depts, now(), true));
   return {
     club: { id: club.id, name: club.name },
     viewer,
-    departments: content.departments.map((d) => departmentRow(d, content, roster, events, viewer)),
+    departments: depts.map((d) => departmentRow(d, content, roster, events, viewer)),
   };
 }
 
@@ -143,24 +147,37 @@ export async function departmentDashboard(actor: Actor, orgId: string, slug: str
     throw new AppError({ code: 'forbidden', message: `Only members of ${club.name} and USG can see its departments.` });
   }
   const content = clubContent(club.slug);
-  const department = content.departments.find((d) => d.slug === slug);
+  const depts = await departmentsOf(club.id);
+  const department = depts.find((d) => d.slug === slug);
   if (!department) return null;
   const at = now();
   const team = teamOf(department, roster);
+  const budget = budgetOf(content, department.slug);
+  const onTeam = new Set(team.members.map((m) => m.userId));
   return {
     club: { id: club.id, name: club.name, slug: club.slug },
     department: { slug: department.slug, name: department.name, purpose: department.purpose, about: department.about },
     viewer,
     lead: team.lead,
     members: team.members,
-    events: content.events.filter((e) => e.department === slug).map((e) => toEvent(e, content, at, true)),
-    updates: updatesFor(content.updates.filter((u) => u.department === slug), content, roster, null),
+    events: content.events.filter((e) => e.department === slug).map((e) => toEvent(e, depts, at, true)),
+    updates: updatesFor(content.updates.filter((u) => u.department === slug), depts, roster, null),
     budget: viewer.president ? {
-      allocatedMicro: allocated(department),
-      committedMicro: department.budget.committedUsd * MICRO,
-      lines: department.budget.lines.map((l) => ({ label: l.label, amountMicro: l.amountUsd * MICRO })),
+      allocatedMicro: allocated(budget),
+      committedMicro: budget.committedUsd * MICRO,
+      lines: budget.lines.map((l) => ({ label: l.label, amountMicro: l.amountUsd * MICRO })),
     } : null,
+    candidates: viewer.president
+      ? roster.filter((p) => !onTeam.has(p.userId)).map(({ userId: id, name, positions: held }) => ({ userId: id, name, positions: held }))
+      : null,
   };
+}
+
+/** The active club's departments for the side nav: slug and name, by name. Empty for no club. */
+export async function departmentLinks(orgId: string | null): Promise<Array<{ slug: string; name: string }>> {
+  if (!orgId || !isUuid(orgId)) return [];
+  return getDb().select({ slug: departmentsTable.slug, name: departmentsTable.name }).from(departmentsTable)
+    .where(and(eq(departmentsTable.orgId, orgId), isNull(departmentsTable.archivedAt))).orderBy(asc(departmentsTable.name));
 }
 
 // ---------------------------------------------------------------- helpers
@@ -228,9 +245,27 @@ function summary(club: Club, content: ClubContent, cohorts: string[]): ClubSumma
   return { ...club, tagline: content.tagline, categories: content.categories, cohorts };
 }
 
-/** `detail` adds the department and the USG funding, for the club's members and USG. */
-function toEvent(e: EventContent, content: ClubContent, at: Date, detail: boolean): DirectoryEvent {
-  const department = detail && e.department ? content.departments.find((d) => d.slug === e.department) : undefined;
+/** A club's live departments, by name, each with the ids of the people on it. */
+async function departmentsOf(orgId: string): Promise<DepartmentRecord[]> {
+  const rows = await getDb().select().from(departmentsTable)
+    .where(and(eq(departmentsTable.orgId, orgId), isNull(departmentsTable.archivedAt))).orderBy(asc(departmentsTable.name));
+  if (rows.length === 0) return [];
+  const members = await getDb().select({ departmentId: departmentMembers.departmentId, userId: departmentMembers.userId })
+    .from(departmentMembers).where(inArray(departmentMembers.departmentId, rows.map((r) => r.id)));
+  return rows.map((r) => ({
+    id: r.id, slug: r.slug, name: r.name, purpose: r.purpose, about: r.about, leadUserId: r.leadUserId,
+    memberIds: members.filter((m) => m.departmentId === r.id).map((m) => m.userId),
+  }));
+}
+
+const NO_BUDGET: BudgetContent = { lines: [], committedUsd: 0 };
+const budgetOf = (content: ClubContent, slug: string): BudgetContent =>
+  Object.hasOwn(content.budgets, slug) ? content.budgets[slug] : NO_BUDGET;
+
+/** `detail` adds the department and the USG funding, for the club's members and USG. An event whose
+ * department was archived shows none. */
+function toEvent(e: EventContent, depts: readonly DepartmentRecord[], at: Date, detail: boolean): DirectoryEvent {
+  const department = detail && e.department ? depts.find((d) => d.slug === e.department) : undefined;
   return {
     id: e.id,
     title: e.title,
@@ -250,14 +285,14 @@ function toEvent(e: EventContent, content: ClubContent, at: Date, detail: boolea
  * left reads as the club's. `publicOfficers` set means an outside viewer: only public posts by the
  * club or by one of these officers, with no department.
  */
-function updatesFor(updates: UpdateContent[], content: ClubContent, roster: RosterEntry[], publicOfficers: Set<string> | null): DirectoryUpdate[] {
+function updatesFor(updates: UpdateContent[], depts: readonly DepartmentRecord[], roster: RosterEntry[], publicOfficers: Set<string> | null): DirectoryUpdate[] {
   return updates.flatMap((u) => {
     const author = u.author ? roster.find((p) => p.netId === u.author) : undefined;
     if (publicOfficers && (u.visibility !== 'public' || (author && !publicOfficers.has(author.userId)) || (u.author && !author))) return [];
     return [{
       id: u.id,
       author: author?.name ?? null,
-      department: !publicOfficers && u.department ? content.departments.find((d) => d.slug === u.department)?.name ?? null : null,
+      department: !publicOfficers && u.department ? depts.find((d) => d.slug === u.department)?.name ?? null : null,
       postedAt: new Date(u.postedAt).toISOString(),
       text: u.text,
     }];
@@ -269,19 +304,21 @@ const nextEvent = (events: DirectoryEvent[]) => {
   return next ? { title: next.title, startsAt: next.startsAt } : null;
 };
 
-const allocated = (d: DepartmentContent) => d.budget.lines.reduce((sum, l) => sum + l.amountUsd, 0) * MICRO;
+const allocated = (b: BudgetContent) => b.lines.reduce((sum, l) => sum + l.amountUsd, 0) * MICRO;
 
-/** The department's lead and members, as current members of the club: someone who left drops out. */
-function teamOf(department: DepartmentContent, roster: RosterEntry[]): { lead: DepartmentRow['lead']; members: DirectoryPerson[] } {
-  const person = (netId: string) => roster.find((p) => p.netId === netId);
-  const lead = department.lead ? person(department.lead) : undefined;
-  const members = department.members.map(person).filter((p): p is RosterEntry => Boolean(p))
+/** The department's lead and members, as current members of the club in roster order: someone who
+ * left the club drops out. */
+function teamOf(department: DepartmentRecord, roster: RosterEntry[]): { lead: DepartmentRow['lead']; members: DirectoryPerson[] } {
+  const onTeam = new Set(department.memberIds);
+  const lead = department.leadUserId ? roster.find((p) => p.userId === department.leadUserId) : undefined;
+  const members = roster.filter((p) => onTeam.has(p.userId))
     .map(({ userId, name, positions: held }) => ({ userId, name, positions: held }));
   return { lead: lead ? { userId: lead.userId, name: lead.name } : null, members };
 }
 
-function departmentRow(d: DepartmentContent, content: ClubContent, roster: RosterEntry[], events: DirectoryEvent[], viewer: DirectoryViewer): DepartmentRow {
+function departmentRow(d: DepartmentRecord, content: ClubContent, roster: RosterEntry[], events: DirectoryEvent[], viewer: DirectoryViewer): DepartmentRow {
   const team = teamOf(d, roster);
+  const budget = budgetOf(content, d.slug);
   return {
     slug: d.slug,
     name: d.name,
@@ -289,7 +326,7 @@ function departmentRow(d: DepartmentContent, content: ClubContent, roster: Roste
     lead: team.lead,
     memberCount: team.members.length,
     nextEvent: nextEvent(events.filter((e) => e.department?.slug === d.slug)),
-    budget: viewer.president ? { allocatedMicro: allocated(d), committedMicro: d.budget.committedUsd * MICRO } : null,
+    budget: viewer.president ? { allocatedMicro: allocated(budget), committedMicro: budget.committedUsd * MICRO } : null,
   };
 }
 

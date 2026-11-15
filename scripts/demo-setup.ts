@@ -6,6 +6,7 @@ import { seedHackscPeople } from '../db/seed/hacksc-people';
 import { seedHackscDistribution } from '../db/seed/hacksc-distribution';
 import { seedHackscDocuments } from '../db/seed/documents';
 import { seedHackscQuota } from '../db/seed/quota';
+import { seedMissingDepartments } from '../db/seed/departments';
 
 async function main() {
   const url = process.env.DATABASE_OWNER_URL;
@@ -17,6 +18,7 @@ async function main() {
       await seedHackscDistribution(tx);
       await seedHackscDocuments(tx);
       await seedHackscQuota(tx);
+      await seedMissingDepartments(tx);
     });
     console.log('HackSC demo records added. Existing records and versions preserved.');
   } finally {
