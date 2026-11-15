@@ -549,7 +549,10 @@ Mock runtime (`runtime/mock.ts`):
   (own templates) inserts version n+1 and sets `latest_version`. `audit('template.publish')`.
 - **Create:** `createUsgTemplate(actor, input)` (`distribution/create-template.ts`, USG admin, server
   action from `/usg/templates`) inserts a `global` template with version 1, not yet distributed.
-  `audit('template.publish', {version: 1, created: true})`.
+  `audit('template.publish', {version: 1, created: true})`. The dialog starts from a sponsorship
+  and funding example for treasurers and presidents, and for a `default` template its "Distribute to
+  the target clubs now" box (on by default) then calls `distribute` (decision 31). A `required`
+  template is still distributed from its page with typed confirmation.
 - **Distribute:** `distribute(templateId)` (USG; `required` or `default`) sets `distributed_at` and
   upserts an installation (`track='latest'`, `enabled=true`) in every active club in `target` (`all`
   or a cohort). Existing overrides are kept; `required` forces `enabled=true`. Idempotent.

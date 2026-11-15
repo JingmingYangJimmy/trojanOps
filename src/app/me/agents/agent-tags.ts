@@ -1,7 +1,9 @@
-// Topic tags for the agents a student sees, by template slug. A slug without an entry (a template a
-// club or USG added later) gets no tags.
+import { baseSlug } from '@/lib/documents/fixtures';
+// Topic tags for the agents a student sees, by template slug (a console-created `<name>-<uuid>` slug
+// matches on `<name>`). A slug without an entry gets no tags.
 const TAGS: Readonly<Record<string, readonly string[]>> = {
   'funding-precheck': ['Funding', 'Budget'],
+  'sponsorship-and-funding': ['Sponsors', 'Budget'],
   'event-planning': ['Events', 'Planning'],
   'recruiting-qa': ['Recruiting', 'FAQ'],
   'showcase-qa': ['Events', 'Performances'],
@@ -14,5 +16,6 @@ const TAGS: Readonly<Record<string, readonly string[]>> = {
 };
 
 export function agentTags(templateSlug: string): readonly string[] {
-  return Object.hasOwn(TAGS, templateSlug) ? TAGS[templateSlug] : [];
+  const slug = Object.hasOwn(TAGS, templateSlug) ? templateSlug : baseSlug(templateSlug);
+  return Object.hasOwn(TAGS, slug) ? TAGS[slug] : [];
 }

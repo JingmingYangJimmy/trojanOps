@@ -2,7 +2,10 @@ import { eq } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
 import { ORG, USER } from '@db/seed/ids';
 import { agentInstallations, agentTemplates, agentTemplateVersions, auditEvents } from '@/lib/db/schema';
-import { canUse, distribute, effectiveAgent, updateInstallation } from '@/lib/distribution';
+import { canUse, distribute, effectiveAgent, myAgents, updateInstallation } from '@/lib/distribution';
+import { agentTags } from '@/app/me/agents/agent-tags';
+import { startersFor } from '@/lib/documents/fixtures';
+import { NEW_TEMPLATE_EXAMPLE, NEW_TEMPLATE_MODELS } from '@/app/usg/templates/template-config';
 import { createUsgTemplate } from '@/lib/distribution/create-template';
 import { actorFor, appSql, closeAppDb, inRolledBackApp } from './db';
 
@@ -80,5 +83,28 @@ describe.skipIf(!probe)('USG template creation', () => {
     expect(await canUse(USER.lee, agent)).toMatchObject({ ok: false });
     await expect(updateInstallation(await actorFor(USER.sam, ORG.startup), startup.id, { modelClass: 'standard' }))
       .rejects.toMatchObject({ error: { code: 'clamp_violation', cap: { field: 'modelClass' } } });
+  }));
+
+  it('puts the dialog’s sponsorship example in treasurers’ My agents once distributed, with starters and tags', () => inRolledBackApp(async () => {
+    // Given: the Create template dialog's defaults, for treasurers and presidents (the dialog's Officers option)
+    const avery = await actorFor(USER.avery, ORG.usg);
+    const { templateId } = await createUsgTemplate(avery, {
+      name: NEW_TEMPLATE_EXAMPLE.name, target: 'all', distribution: 'default',
+      version: {
+        purpose: NEW_TEMPLATE_EXAMPLE.purpose, systemPrompt: NEW_TEMPLATE_EXAMPLE.systemPrompt,
+        audience: 'positions', usableBy: ['treasurer', 'president'], maxTier: 'officers',
+        sourceKinds: [...NEW_TEMPLATE_EXAMPLE.sourceKinds], tools: [], ...NEW_TEMPLATE_MODELS, changelog: 'First version.',
+      },
+    });
+    const listed = async (userId: string) => (await myAgents(userId)).flatMap((club) => club.agents).filter((a) => a.name === NEW_TEMPLATE_EXAMPLE.name);
+    expect(await listed(USER.taylor)).toEqual([]);
+    // When
+    await distribute(avery, templateId);
+    // Then: Taylor (treasurer) sees it in each club; Casey (member only) does not.
+    const taylor = await listed(USER.taylor);
+    expect(taylor.length).toBeGreaterThan(0);
+    expect(await listed(USER.casey)).toEqual([]);
+    expect(startersFor(taylor[0].templateSlug)).toContain('Draft an outreach email to a returning sponsor.');
+    expect(agentTags(taylor[0].templateSlug)).toEqual(['Sponsors', 'Budget']);
   }));
 });

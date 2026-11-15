@@ -7,6 +7,7 @@ export const STARTERS: Readonly<Record<string, string[]>> = {
   'recruiting-qa': ['Do I need experience to join Startup Club?', 'How does recruiting work?', 'Does membership cost anything?'],
   'showcase-qa': ['When and where is the spring showcase?', 'Are tickets free for students?', 'How can I help backstage?'],
   handoff: ['What did we decide at the Oct 8 meeting?', 'How did pitch night go last year?', 'What should a new treasurer know first?'],
+  'sponsorship-and-funding': ['Which sponsors could we approach for our next event?', 'Draft an outreach email to a returning sponsor.', 'Does our planned spending fit the USG funding rules?'],
   'funding-precheck': ['How much of the annual cap does the spring budget use?', 'When are funding requests due?', 'Submit the founder panel request for $1,800 to the USG queue.'],
   'event-planning': ['How far ahead should we book a room?', 'What should we change about check-in?', 'What should an event organizer prepare?'],
   'usg-review-assistant': ['What do reviewers check first?', 'Which requests should be flagged?', 'What are the annual funding limits?'],
@@ -15,6 +16,14 @@ export const STARTERS: Readonly<Record<string, string[]>> = {
   'archery-getting-started': ['How can I try archery with the club?', 'Do I need my own equipment?', 'What should I know before my first practice?'],
   'audition-guide': ['How do Dance Club auditions work?', 'What should I prepare for an audition?', 'Can beginners audition?'],
 };
+
+/** A template created in the USG console has slug `<name>-<uuid>`; its starters are keyed by `<name>`. */
+export const baseSlug = (slug: string): string => slug.replace(/-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/, '');
+export function startersFor(slug: string): string[] {
+  if (Object.hasOwn(STARTERS, slug)) return STARTERS[slug];
+  const base = baseSlug(slug);
+  return Object.hasOwn(STARTERS, base) ? STARTERS[base] : [];
+}
 
 export const DEMO_INDEX = { label: 'Demo index', maxChunkChars: 800, minIndexableChars: 40, queuedMs: 3000, msPerChunk: 2000 } as const;
 export interface DemoChunk {

@@ -43,6 +43,13 @@ export const TOOLS: readonly ToolOption[] = [
 export const toolOption = (slug: string): ToolOption => TOOLS.find(t => t.slug === slug) ?? { slug, name: slug };
 
 /** The models a new template offers: every economy model, with gpt-6-luna first in chat. */
+/** The Create template dialog starts from this USG example: sponsors and money for club officers. */
+export const NEW_TEMPLATE_EXAMPLE = {
+  name: 'Sponsorship and funding',
+  purpose: 'Plans sponsor outreach and checks club spending against the USG funding rules.',
+  systemPrompt: 'You help club treasurers and presidents with sponsors and money. Use the club’s finance documents, including sponsor contacts and the budget, and the USG Funding Department Guidelines. When drafting sponsor outreach, name what the club already offers sponsors and who to contact. When checking spending, say for each budget line whether it fits the guidelines and cite the rule by section. Never commit the club to a payment: officers decide.',
+  sourceKinds: ['finance', 'rulebook'] as readonly string[],
+} as const;
 export const NEW_TEMPLATE_MODELS: { readonly modelIds: ModelId[]; readonly defaultModelId: ModelId } = {
   modelIds: ['gpt-6-luna', 'claude-haiku-5-5', 'gemini-4-hydrogen'], defaultModelId: 'gpt-6-luna',
 };

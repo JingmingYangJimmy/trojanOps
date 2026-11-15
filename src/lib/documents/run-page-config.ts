@@ -8,7 +8,7 @@ import type { ResolvedAgent } from '../distribution/compose';
 import { quotaLine } from '../gateway/quota-line';
 import { quotaMessage } from '../gateway/quota-messages';
 import { priceMicro } from '../gateway/prices';
-import { STARTERS } from './fixtures';
+import { startersFor } from './fixtures';
 import type { ChatConfig } from './run-config';
 import { tierLabels } from './library-view';
 
@@ -23,7 +23,7 @@ export async function buildRunConfig(actor: Actor, agent: ResolvedAgent, display
     models: { allowed: agent.allowedModelClasses.map((modelClass) => ({ modelClass, priceMicro: priceMicro(modelClass) })), defaultClass: agent.modelClass, ids: agent.allowedModelIds, defaultId: agent.defaultModelId, fixedByClub: agent.fixedByClub, limitedByTemplate: agent.limitedByTemplate },
     quota,
     blockedMessage: quota.remainingMicro < Math.min(...agent.allowedModelClasses.map(priceMicro)) ? quotaMessage(quota.scope, { club: display.club, agent: agent.name, ...quota }) : null,
-    starters: STARTERS[agent.templateSlug === 'funding-precheck' && agent.orgId === ORG.hacksc ? 'hacksc-funding-precheck' : agent.templateSlug] ?? [],
+    starters: startersFor(agent.templateSlug === 'funding-precheck' && agent.orgId === ORG.hacksc ? 'hacksc-funding-precheck' : agent.templateSlug),
     audienceLabel: display.audience,
     templateVersion: agent.templateVersion,
   };

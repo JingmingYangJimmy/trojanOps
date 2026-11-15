@@ -8,7 +8,7 @@ import { AgentTags } from '@/components/inspector/agent-header';
 import { ModelPicker } from '@/components/inspector/model-picker';
 import { buttonVariants } from '@/components/ui/button';
 import { agentTags } from '@/app/me/agents/agent-tags';
-import { STARTERS } from '@/lib/documents/fixtures';
+import { startersFor } from '@/lib/documents/fixtures';
 import { classOf, DEMO_MODELS, type ModelId } from '@/lib/gateway/models';
 import { creditLabel, priceMicro } from '@/lib/gateway/prices';
 import { cn } from '@/lib/utils';
@@ -26,7 +26,7 @@ export interface TemplatePreviewProps {
 }
 
 export function TemplatePreview({ name, slug, versionLabel, purpose, modelIds, defaultModelId, onDefaultModel, disabled }: TemplatePreviewProps) {
-  const starters = Object.hasOwn(STARTERS, slug) ? STARTERS[slug] : [];
+  const starters = startersFor(slug);
   const tags = agentTags(slug);
   const choices = DEMO_MODELS.filter(model => modelIds.includes(model.id));
   return <aside aria-labelledby="template-preview-title" className="min-w-0 space-y-3 lg:sticky lg:top-24">
