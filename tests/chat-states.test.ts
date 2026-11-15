@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { Composer } from '@/components/inspector/composer';
 import { CitationContent } from '@/components/inspector/citation-content';
 import { Transcript } from '@/components/inspector/transcript';
+import type { RunResult } from '@/lib/contracts';
 import type { ChatConfig } from '@/lib/documents/run-config';
 
 const config: ChatConfig = {
@@ -51,5 +52,23 @@ describe('citation quote content', () => {
     expect(html.includes('The board met on October 8.')).toBe(allowed);
     expect(html).toContain(allowed ? 'Readable through Startup Club' : 'Access changed.');
     expect(html).not.toContain('private-document-id');
+  });
+});
+
+describe('chat notes between runs', () => {
+  const result = (runId: string, version: number): RunResult => ({
+    runId, reply: 'Placeholder answer.', citations: [], pendingActions: [],
+    inspector: {
+      runGrants: [], sources: [], readInRun: [], templateVersion: 1, billedClub: 'Startup Club', costMicro: 30_000,
+      quotaRemainingMicro: {}, auditEventId: 1,
+      permitted: [{ id: 'guidelines', title: 'USG Funding Department Guidelines', tier: 'public', version }],
+    },
+  });
+  it('says when a document the agent reads moved to a new version', () => {
+    const html = renderToStaticMarkup(createElement(Transcript, { agentName: 'Funding pre-check', demoRuntime: true, actions: {}, turns: [
+      { kind: 'you', key: 'y1', text: 'Check Demo day.' }, { kind: 'agent', key: 'r1', result: result('r1', 1) },
+      { kind: 'you', key: 'y2', text: 'And now?' }, { kind: 'agent', key: 'r2', result: result('r2', 2) },
+    ] }));
+    expect(html).toContain('USG Funding Department Guidelines is now v2.');
   });
 });

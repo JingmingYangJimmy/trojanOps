@@ -9,6 +9,8 @@ function firstSentence(text: string): string {
   const paragraph = text.slice(Math.max(0, start)).split(/\n\s*\n/)[0].trim();
   return (paragraph.match(/^[\s\S]*?[.!?](?:\s|$)/)?.[0] ?? paragraph).trim();
 }
+/** A document above version 1 is named with its version, e.g. "USG Funding Department Guidelines (v2)". */
+const titled = (d: { title: string; version?: number }) => (d.version && d.version > 1 ? `${d.title} (v${d.version})` : d.title);
 
 export const mockRuntime: AgentRuntime = {
   async run(agent, _actor, input, { accessibleDocuments: docs }) {
@@ -16,7 +18,7 @@ export const mockRuntime: AgentRuntime = {
     const lines = [
       "**Placeholder answer.** The demo runtime doesn't call a model.",
       cited.length ? 'Here is the first sentence of each cited document this run could read:' : 'This run has no permitted documents to cite.',
-      ...cited.map((d, i) => `${i + 1}. **${d.title}:** ${firstSentence(d.bodyMd)} [${i + 1}]`),
+      ...cited.map((d, i) => `${i + 1}. **${titled(d)}:** ${firstSentence(d.bodyMd)} [${i + 1}]`),
     ];
     if (agent.rulePack) {
       const pack = z.object({ annualCapUsd: z.number() }).safeParse(agent.rulePack.content);

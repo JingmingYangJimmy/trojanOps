@@ -44,7 +44,7 @@ export function navigationFor(actor: Actor, clubs: readonly Pick<MyAgentsClub, '
   if (activeOrgIsUsg && actor.positions.includes('admin')) {
     scopes.push({ href: '/usg/templates', label: 'USG admin', match: '/usg', items: [
       { href: '/usg/templates', label: 'Templates' },
-      { href: '/usg/rule-packs', label: 'Rule packs' },
+      { href: '/usg/documents', label: 'Documents' },
       { href: '/usg/integrations', label: 'Management', activePaths: ['/usg/clubs'] },
       { href: '/usg/audit', label: 'Audit' },
     ] });

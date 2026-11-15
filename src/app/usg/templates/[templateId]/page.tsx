@@ -15,6 +15,6 @@ export default async function TemplatePage({ params }: { params: Promise<{ templ
     return <><PageHeader title="Agent template" /><DeniedConsole /></>;
   }
   if (!data) notFound();
-  return <><PageHeader title={data.template.name} description="Version history, distribution and the clubs this template reaches." action={<BackToTemplates />} /><ConsoleNav />
+  return <><PageHeader title={data.template.name} description="Configuration, distribution and versions." action={<BackToTemplates />} /><ConsoleNav />
     <TemplateDetail key={`${actor.userId}:${actor.activeOrgId}:${templateId}:${data.template.latestVersion}:${data.template.status}:${data.template.target}:${data.template.distribution}:${data.template.name}`} data={data} /></>;
 }

@@ -24,6 +24,10 @@ function changes(before: RunInspector | null, after: RunInspector): string[] {
   const removed = [...new Set(before.runGrants.filter((g) => !after.runGrants.some((a) => a.grant === g.grant)).map((g) => g.label))];
   if (removed.length) notes.push(`Your access changed since your last run: ${removed.join(', ')} no longer applies.`);
   if (after.rulePack && before.rulePack?.version !== after.rulePack.version) notes.push(`${after.rulePack.label} is now v${after.rulePack.version}.`);
+  for (const doc of after.permitted) {
+    const old = before.permitted.find((d) => d.id === doc.id);
+    if (old && (doc.version ?? 1) > (old.version ?? 1)) notes.push(`${doc.title} is now v${doc.version}.`);
+  }
   if (before.templateVersion !== after.templateVersion) notes.push(`The agent was updated to template v${after.templateVersion}.`);
   return notes;
 }

@@ -88,7 +88,7 @@ describe.skipIf(!probe)('current connector CSV projections', () => {
       expect(text).not.toContain('Spring 2026 budget');
       expect(text).not.toContain('Meeting minutes 2026-10-08');
       expect(text).not.toContain('Demo text for');
-      expect(preview.data.rows.map(row => row[1]).filter(title => title === 'USG funding rules (demo text)')).toHaveLength(1);
+      expect(preview.data.rows.map(row => row[1]).filter(title => title === 'USG Funding Department Guidelines')).toHaveLength(1);
     });
   });
 

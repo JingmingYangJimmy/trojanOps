@@ -254,8 +254,8 @@ describe.skipIf(!probe)('distribute and narrow an installation (D2)', () => {
 });
 
 describe.skipIf(!probe)('POST /api/usg/rule-packs/:slug/versions (D6)', () => {
-  it('publishes the next version, which the next run resolves', () =>
-    inRolledBackApp(async () => {
+  it('publishes the next version as the latest published pack', () =>
+    inRolledBackApp(async (tx) => {
       const res = await post(
         rulePacksRoute.POST,
         'http://localhost/api/usg/rule-packs/usg-funding/versions',
@@ -263,14 +263,16 @@ describe.skipIf(!probe)('POST /api/usg/rule-packs/:slug/versions (D6)', () => {
         {
           userId: USER.avery,
           orgId: ORG.usg,
-          body: { label: 'Demo rule pack', content: { annualCapUsd: 10_000 } },
+          body: { label: 'USG Funding Guidelines 2026–27', content: { annualCapUsd: 10_000 } },
         },
       );
       expect(res.status).toBe(200);
       expect(await res.json()).toMatchObject({ version: 2 });
 
-      const agent = await effectiveAgent(INSTALLATION.startupFundingPrecheck);
-      expect(agent.rulePack).toMatchObject({ version: 2, content: { annualCapUsd: 10_000 } });
+      // No seeded template names the pack any more, so read the stored row.
+      const [latest] = await tx.execute<{ version: number; status: string; content: { annualCapUsd: number } }>(
+        sql`select version, status, content from rule_packs where slug = 'usg-funding' order by version desc limit 1`);
+      expect(latest).toMatchObject({ version: 2, status: 'published', content: { annualCapUsd: 10_000 } });
     }));
 
   // isUsgAdmin needs position `admin` in a usg-kind org; Riley is a reviewer, Sam is a club
@@ -284,7 +286,7 @@ describe.skipIf(!probe)('POST /api/usg/rule-packs/:slug/versions (D6)', () => {
         rulePacksRoute.POST,
         'http://localhost/api/usg/rule-packs/usg-funding/versions',
         { slug: 'usg-funding' },
-        { userId, orgId, body: { label: 'Demo rule pack', content: { annualCapUsd: 10_000 } } },
+        { userId, orgId, body: { label: 'USG Funding Guidelines 2026–27', content: { annualCapUsd: 10_000 } } },
       );
       expect(res.status).toBe(403);
     }));
