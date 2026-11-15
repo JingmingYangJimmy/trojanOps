@@ -3,6 +3,9 @@
 The authoritative visual rules are `.claude/agents/ui-designer.md`; target content and states are
 in `docs/chat-knowledge-design.md`. This is a light-theme management console with fictional seed data.
 
+The user's final scope is desktop only: acceptance uses 1440 and 1920px viewports. Earlier phone
+captures are exploratory evidence and are excluded from the final verdict.
+
 ## Tokens
 
 Use the existing `globals.css` color tokens: background, foreground, primary, primary-hover,
