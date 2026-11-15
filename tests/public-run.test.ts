@@ -27,6 +27,9 @@ describe.skipIf(!probe)('shared directory chat', () => {
     expect(html).not.toContain('Sponsor contacts');
   });
   it.each([INSTALLATION.startupHandoff, INSTALLATION.startupRecruitingQa])('does not expose a nonpublic or disabled agent (%s)', async (id) => {
-    expect(await renderPage(id)).toContain('This agent is not in the public directory');
+    const html = await renderPage(id);
+    expect(html).toContain('Agent unavailable');
+    expect(html).not.toContain('name="input"');
+    expect(html).not.toContain('What Club handoff can read');
   });
 });
