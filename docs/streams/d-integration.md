@@ -89,3 +89,13 @@ Say "mock runtime" and keep the Mock labels visible. If a real agent misbehaves,
 ## Open requests
 
 - **A:** `AppError` has no server-error code, so a failed roster audit (which rolls the sync back) surfaces as `invalid` (400).
+
+## Connector details
+
+Every row on `/usg/integrations` has a read-only **View details** panel explaining its
+platform-wide purpose, current implementation, operation and demo limitations. These panels do
+not configure connectors, approve applications or display individual users' model usage.
+Roster details preview the current source's club, person and position fields after the existing
+USG-admin authorization check; this is a source snapshot, not a prediction of sync changes or a
+list of current database memberships. Opening a panel never imports the roster. The separate
+**Sync roster** action and its results remain on the page.

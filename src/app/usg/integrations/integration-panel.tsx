@@ -9,13 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { ConnectorKind, ConnectorStatus } from '@/lib/contracts';
 import { RosterSyncError, syncRoster, type RosterSyncResult } from './sync-request';
+import { ConnectorDetails, type RosterPreview } from './connector-details';
 
 type ConnectorRow = Omit<ConnectorStatus, 'lastSyncAt'> & { readonly lastSyncAt: string | null };
 const labels: Record<ConnectorKind, string> = {
   identity: 'Identity', roster: 'Roster', documents: 'Documents', llm: 'Language model', applications: 'Applications',
 };
 const operation: Record<ConnectorKind, string> = {
-  identity: 'At sign-in', roster: '', documents: 'Manual uploads', llm: 'On each run', applications: 'On confirmation',
+  identity: 'At sign-in', roster: '', documents: 'Manual uploads', llm: 'Demo answers', applications: 'Run-page confirmation',
 };
 const health = {
   ok: { label: 'OK', Icon: Check, variant: 'success' },
@@ -26,7 +27,10 @@ const dateFormat = new Intl.DateTimeFormat('en-US', {
   dateStyle: 'medium', timeStyle: 'long', timeZone: 'America/Los_Angeles',
 });
 
-export function IntegrationPanel({ connectors }: { readonly connectors: readonly ConnectorRow[] }) {
+export function IntegrationPanel({ connectors, rosterPreview }: {
+  readonly connectors: readonly ConnectorRow[];
+  readonly rosterPreview?: RosterPreview;
+}) {
   const router = useRouter();
   const inFlight = useRef(false);
   const [pending, startTransition] = useTransition();
@@ -62,7 +66,7 @@ export function IntegrationPanel({ connectors }: { readonly connectors: readonly
       </div>
     </Alert>}
     <Table>
-      <TableCaption>All five connectors use local demo implementations. Last sync shows the latest completed sync in Pacific time.</TableCaption>
+      <TableCaption>These platform-wide connectors use local demo implementations. Demo ready is not a live health check. Last sync applies to roster imports; other connectors run on demand.</TableCaption>
       <TableHeader><TableRow>
         <TableHead>Kind</TableHead><TableHead>Implementation</TableHead><TableHead>Status</TableHead>
         <TableHead>Last sync</TableHead><TableHead>Action</TableHead>
@@ -72,13 +76,13 @@ export function IntegrationPanel({ connectors }: { readonly connectors: readonly
         return <TableRow key={connector.kind}>
           <TableHead scope="row">{labels[connector.kind]}</TableHead>
           <TableCell><div className="flex items-center gap-2"><span>{connector.implementation}</span>{connector.isMock && <Badge>Mock</Badge>}</div></TableCell>
-          <TableCell><Badge variant={status.variant}><status.Icon aria-hidden="true" />{status.label}</Badge></TableCell>
+          <TableCell><Badge variant={status.variant}><status.Icon aria-hidden="true" />{connector.isMock && connector.status === 'ok' ? 'Demo ready' : status.label}</Badge></TableCell>
           <TableCell className="whitespace-nowrap font-mono text-xs">{connector.lastSyncAt
             ? <time dateTime={connector.lastSyncAt}>{dateFormat.format(new Date(connector.lastSyncAt))}</time>
-            : <span className="font-sans text-sm text-muted-foreground">Not synced</span>}</TableCell>
-          <TableCell>{connector.kind === 'roster'
+            : <span className="font-sans text-sm text-muted-foreground">{connector.kind === 'roster' ? 'Not synced' : 'N/A'}</span>}</TableCell>
+          <TableCell><div className="flex items-center gap-3"><ConnectorDetails kind={connector.kind} label={labels[connector.kind]} implementation={connector.implementation} isMock={connector.isMock} rosterPreview={rosterPreview} />{connector.kind === 'roster'
             ? <Button onClick={sync} disabled={pending} aria-busy={pending} className="min-w-36 border border-transparent disabled:border-input disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"><RefreshCw aria-hidden="true" />{pending ? 'Syncing roster' : 'Sync roster'}</Button>
-            : <span className="whitespace-nowrap text-muted-foreground">{operation[connector.kind]}</span>}</TableCell>
+            : <span className="whitespace-nowrap text-muted-foreground">{operation[connector.kind]}</span>}</div></TableCell>
         </TableRow>;
       })}</TableBody>
     </Table>
