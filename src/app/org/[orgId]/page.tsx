@@ -50,6 +50,8 @@ export default async function ClubHomePage({ params }: { params: Promise<{ orgId
         title={home.org.name}
         description="Your agents, documents and spend in this club."
         action={(
+          // The side nav already gives a president "Administration" (stream D's navigation.ts),
+          // so a second entry point here would only be a second secondary button in the header.
           <Link href={`/org/${home.org.id}/catalog`} className={buttonVariants({ variant: 'secondary' })}>
             Open catalog
           </Link>
