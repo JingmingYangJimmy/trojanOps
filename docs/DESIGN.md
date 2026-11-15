@@ -18,12 +18,23 @@ Borders carry structure; only overlays have shadow-overlay. All controls have vi
 ## Layout
 
 Layout: the chat follows the user's Dify-style override: user messages align right in neutral
-message surfaces; AI answers align left under an explicit AI label. A bounded 720px chat window
-owns transcript scrolling, with its composer fixed below the scroll area. A 384px inspector with
-its own overflow sits across a 24px gap. Document detail uses a sticky aside. Columns stack on
+message surfaces; AI answers align left under the agent's name. My agents is one workspace: a
+272px agent rail grouped by source, the chat (a centred transcript column up to 760px that owns
+its scrolling, composer fixed below) and a 320px Run details panel with its own overflow. Other
+run pages show the same chat and panel without the rail. Document detail uses a sticky aside. Columns stack on
 narrow screens. Wide
 tables own horizontal scrolling. Retrieval uses a 360px form beside fluid results and stacks
 when narrow. The application shell and disclaimer remain in document flow.
+
+My agents starts with a titled rail and compact inset agent cards, following the user's card-view
+request. Cards use 4px corners, neutral borders and a Cardinal border on the selected item.
+Source headings are 12/16,
+agent names 14/20 semibold, purposes 12/16 and limited to two lines. The active row uses the
+Cardinal selection treatment. The chat header carries name, source and version;
+topics stay in the rail. Before a run, the transcript region centres the current purpose and
+a vertical list of starter questions. Once a message is sent, the transcript starts at the top.
+The composer groups model and price on the left, with allowance and Run on the right, wrapping
+within its own width. Run details stays visible and explains its contents before the first run.
 
 ## Screens and priorities
 
@@ -48,6 +59,13 @@ Respect reduced motion. No browser storage holds questions or answers.
 
 ## Required behavior and content
 
+Agent runs show a rotating progress icon and a pulsing track while the request checks access and
+quota. The existing word-by-word playback presents the completed answer, alongside checked
+access and document counts and a rotating playback indicator. Motion uses the existing Tailwind
+spin and pulse primitives, runs only while the corresponding operation is active and becomes
+static under reduced motion. Completed answers retain their source citations. Demo prompts,
+status labels and answers are English-only. The loader catalog was unreachable during this edit.
+
 Preserve every control and state in design sections 5–7: IME-safe keyboard submission, starters
 that fill without sending, safe Markdown, numbered citation buttons, quotes and access reasons,
 real credits and resets, finished-run trace, human confirmation, metadata-only Usage, live demo
@@ -60,6 +78,14 @@ Capture chat before changes, then C1–C6, Usage, Documents, Document, Retrieval
 at desktop and narrow widths. Verify keyboard operation, reflow, live feedback and privacy.
 The gap to close is missing cost visibility, chat controls and knowledge views; decorative
 metrics, marketing cards and a conversation sidebar are outside the brief.
+
+The composer uses a compact demo-model menu displaying official API IDs, verified 2026-11-15:
+`gpt-6-luna`, `gpt-6.1-sol`, `claude-haiku-5-5`, `claude-sonnet-5-5`,
+`gemini-4-hydrogen`, and `gemini-4-carbon`.
+These map to the gateway's existing Economy/Standard demo pricing classes
+and remain filtered by the template and club policy. The menu explicitly identifies the mock
+runtime. Selection is local UI state, not a configured external provider. Reset dates live in
+the allowance popover, keeping the closed toolbar compact.
 
 ## Template administration
 

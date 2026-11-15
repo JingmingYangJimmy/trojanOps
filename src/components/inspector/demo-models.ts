@@ -1,6 +1,6 @@
 import type { ModelClass } from '@/lib/contracts';
 
-/** Official API IDs verified 2026-11-15. Demo pricing maps to the gateway's existing classes.
+/** TODO(verify): official API IDs, checked 2026-11-15. Demo pricing maps to the gateway's existing classes.
  * https://developers.openai.com/api/docs/models
  * https://platform.claude.com/docs/en/models/overview
  * https://aistudio.google.com/docs/models

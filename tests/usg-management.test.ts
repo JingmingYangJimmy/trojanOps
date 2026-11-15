@@ -28,7 +28,7 @@ describe.skipIf(!probe)('USG policy and template management', () => {
     const actor = await avery();
     expect((await usgTemplatesView(actor)).templates.map(t => t.slug)).toContain('event-planning');
     expect((await usgTemplateView(actor, TEMPLATE.eventPlanning))?.versions[0].modelClasses).toEqual(['economy']);
-    expect(await usgClubsView(actor)).toHaveLength(3);
+    expect(await usgClubsView(actor)).toHaveLength(4);
     const [{ count: before }] = await tx.execute<{ count: number }>(sql`select count(*)::int as count from audit_events where action = 'authz.denied'`);
     for (const read of [usgTemplatesView, usgClubsView]) await expect(read(await sam())).rejects.toMatchObject({ error: { code: 'forbidden' } });
     const [{ count: after }] = await tx.execute<{ count: number }>(sql`select count(*)::int as count from audit_events where action = 'authz.denied'`);
@@ -81,10 +81,10 @@ describe.skipIf(!probe)('USG policy and template management', () => {
   it('reads immutable history and patches only authorized metadata, keeping old installations on target changes', () => inRolledBackApp(async tx => {
     const actor = await avery();
     const detail = await getTemplate(actor, TEMPLATE.eventPlanning);
-    expect(detail.versions).toHaveLength(1); expect(detail.targets).toHaveLength(3);
+    expect(detail.versions).toHaveLength(1); expect(detail.targets).toHaveLength(4);
     await updateTemplate(actor, TEMPLATE.eventPlanning, { name: 'Event planning updated', target: 'pilot' });
     const next = await getTemplate(actor, TEMPLATE.eventPlanning);
-    expect(next.template.name).toBe('Event planning updated'); expect(next.targets).toHaveLength(2);
+    expect(next.template.name).toBe('Event planning updated'); expect(next.targets).toHaveLength(3);
     expect(next.versions).toEqual(detail.versions);
     await expect(updateTemplate(actor, TEMPLATE.fundingPrecheck, { distribution: 'optional' })).rejects.toMatchObject({ error: { code: 'invalid' } });
     await expect(updateTemplate(actor, TEMPLATE.eventPlanning, { target: 'missing-cohort' })).rejects.toMatchObject({ error: { code: 'invalid' } });
