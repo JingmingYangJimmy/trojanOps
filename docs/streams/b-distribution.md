@@ -129,3 +129,38 @@ coordinate membership writes with this service's club-row lock. D's
 `src/lib/lifecycle/import.ts` compares against `roster_state`; `tests/roster-import.test.ts` covers a
 sync after a manual transfer. The transfer API and admin form remain
 separate slices.
+
+## WP-6 USG console
+
+`/usg/templates`, `/usg/templates/[templateId]`, `/usg/clubs`, and `/usg/rule-packs` now
+use authorized, serializable server models in `usg-view.ts`. USG admins can review version history,
+change rollout metadata, distribute to all active clubs or a seeded cohort, publish immutable
+versions, retire templates, edit club quotas/policy, and publish rule-pack versions. Required
+rollouts and retirement require the typed template name; other publication actions show a review.
+Client components import only distribution types and call the existing HTTP services.
+
+New §14 routes:
+
+- GET/PATCH `/api/usg/templates/:templateId`: immutable history/target summary and strict metadata
+  edits (`name`, `target`, `distribution`). Changing a target affects future rollout/provisioning;
+  it does not remove old installations. A distributed template keeps its distribution type.
+- PUT `/api/usg/club-policy/:orgId`: USG-only policy update. Checks every installed resolved version
+  against the proposed policy before writing, including disabled/pinned installations. A conflicting
+  override or public agent must be narrowed by its club first; the policy setter does not disable
+  or rewrite that club's installation silently.
+- POST `/api/orgs/:orgId/installations`: president-only optional global/own-club installation,
+  body `{templateId}`. Cohorts, active club/template, policy and I7 are checked before inserting.
+  Existing installations are preserved. New public installations stay disabled and receive an own
+  budget; opening them to the campus still requires Publish to all students.
+
+`TODO(verify):` frozen `AuditAction` has no policy or metadata edit action. Policy edits currently use
+`installation.update` with an org target and `resource: 'club_policy'` (visible in the president's
+audit); metadata edits use `template.publish` with `metadataOnly: true`. Ask A to add dedicated
+contract actions before relying on these labels for reporting. No contract was changed here.
+
+Validation: `tests/usg-management.test.ts` covers console authorization, denied-read audits,
+policy clamps/audit visibility, immutable version history, optional installation, and these routes.
+D2/D6 were also exercised through the local pages: distribute Event planning to three clubs, reject
+Sam's standard-model override with the economy cap, publish the $10,000 funding pack, and run the
+funding agent through the gateway to see v2. Use `pnpm db:reset` before the full test run after such
+browser checks, since those demo actions deliberately change the seeded database.

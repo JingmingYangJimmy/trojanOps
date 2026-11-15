@@ -9,3 +9,6 @@ export { distribute } from './distribute';
 export { publishVersion, retire, versionDraftSchema, type VersionDraft } from './versions';
 export { updateInstallation, installationPatchSchema, type InstallationPatch } from './install';
 export { publishRulePack, rulePackDraftSchema } from './rule-packs';
+export { setClubPolicy, clubPolicySchema } from './club-policy';
+export { getTemplate, updateTemplate, templatePatchSchema } from './template-admin';
+export { installTemplate, createInstallationSchema } from './create-installation';
