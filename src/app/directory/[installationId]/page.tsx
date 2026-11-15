@@ -22,14 +22,14 @@ export default async function PublicAgentPage({ params }: { readonly params: Pro
   if (!agent) return <>
     <PageHeader title="Agent unavailable" />
     <Alert><LockKeyhole aria-hidden="true" /><div>
-      <AlertTitle>This agent is not in the public directory</AlertTitle>
-      <AlertDescription>It may have been turned off or its audience may have changed. <Link href="/directory" className="text-primary underline">Return to the directory</Link> to choose an available agent.</AlertDescription>
+      <AlertTitle>This agent is not open to all students</AlertTitle>
+      <AlertDescription>It may have been turned off or its audience may have changed. <Link href="/directory/clubs" className="text-primary underline">Browse clubs</Link> to choose an available agent.</AlertDescription>
     </div></Alert>
   </>;
   const data = await getRunPageData(actor, agent.orgId, agent.installationId);
   if (!data?.workspace) return <><PageHeader title="Agent unavailable" /><p>This agent is no longer available. Return to the directory and choose an available agent.</p></>;
   return <>
-    <Link href="/directory" className="mb-4 inline-flex min-h-8 items-center text-primary underline underline-offset-4">Back to directory</Link>
+    <Link href={`/directory/clubs/${agent.orgId}?tab=agents`} className="mb-4 inline-flex min-h-8 items-center text-primary underline underline-offset-4">Back to {agent.orgName}</Link>
     <PageHeader title={agent.name} description={agent.purpose} />
     <div className="mb-6 flex flex-wrap items-center gap-3 text-muted-foreground">
       <span>{agent.orgName}</span><Badge><Users aria-hidden="true" />All students</Badge><span>Template v{agent.templateVersion}</span>
