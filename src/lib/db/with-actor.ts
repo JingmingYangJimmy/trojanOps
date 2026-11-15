@@ -8,7 +8,7 @@ export interface ActorScope {
   /** Grants to apply. Default: actor.grants. Agent runs pass capGrants(...) instead. */
   grants?: Grant[];
   /** app.agent_sources: the agent's sources for a run; for the document library, every source of
-   * the active org plus USG public sources. Empty = no document is visible. */
+   * the viewed org plus USG public sources. Empty = no document is visible. */
   sourceIds?: string[];
   /** Document tier ceiling for a run. Library reads omit it and rely on the viewer's grants. */
   readonly maxTier?: Tier;
