@@ -90,12 +90,20 @@ Say "mock runtime" and keep the Mock labels visible. If a real agent misbehaves,
 
 - **A:** `AppError` has no server-error code, so a failed roster audit (which rolls the sync back) surfaces as `invalid` (400).
 
-## Connector details
+## Roster preview and demo summary
 
-Every row on `/usg/integrations` has a read-only **View details** panel explaining its
-platform-wide purpose, current implementation, operation and demo limitations. These panels do
-not configure connectors, approve applications or display individual users' model usage.
-Roster details preview the current source's club, person and position fields after the existing
-USG-admin authorization check; this is a source snapshot, not a prediction of sync changes or a
-list of current database memberships. Opening a panel never imports the roster. The separate
-**Sync roster** action and its results remain on the page.
+`/usg/integrations` opens with a full-width, read-only roster CSV preview instead of per-connector
+detail panels. The table shows club, person and position after the existing server-side USG-admin
+authorization check. The **AI summary** is visibly marked **Demo**: it uses a local text template
+and current CSV counts, without calling a model. People are counted by source identity and clubs
+by source slug, so multiple positions and identical display names do not distort the totals.
+Source identifiers are stripped before the preview reaches the client.
+
+This is a source snapshot, not current database memberships or a prediction of sync changes.
+Previewing makes no roster changes; **Sync roster** remains a separate explicit action with its
+existing results and error handling. The five platform-wide connector statuses remain below the
+preview. No connector configuration, application approval or all-user model usage view is added.
+
+`tests/roster-preview.test.ts` verifies the real CSV counts, identity-based counting and display-only
+projection, and empty-source handling. A source read failure suppresses the summary and displays
+the preview error while preserving the sync action and connector table.

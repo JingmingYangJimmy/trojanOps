@@ -6,7 +6,7 @@ import { getConnectors, listConnectors } from '@/lib/connectors/registry';
 import { getActor } from '@/lib/identity';
 import { requireRosterAdmin } from '@/lib/lifecycle/import';
 import { IntegrationPanel } from './integration-panel';
-import type { RosterPreview } from './connector-details';
+import { buildRosterPreview, type RosterPreview } from '@/lib/connectors/roster/preview';
 
 export default async function IntegrationsPage() {
   const actor = await getActor();
@@ -31,15 +31,13 @@ export default async function IntegrationsPage() {
   try {
     // Authorize first. Preview only display fields from the source; never send external user IDs.
     const rows = await getConnectors().roster.fetch();
-    rosterPreview = { status: 'ready', rows: rows.map(row => ({
-      club: row.orgName, person: row.userDisplayName, position: row.position,
-    })).sort((a, b) => a.club.localeCompare(b.club) || a.person.localeCompare(b.person) || a.position.localeCompare(b.position)) };
+    rosterPreview = buildRosterPreview(rows);
   } catch {
     // A source preview failure must not hide connector status or the existing Sync roster action.
     rosterPreview = { status: 'unavailable' };
   }
   return <>
-    <PageHeader title="Integrations" description="Review platform-wide demo connectors and sync club memberships from the roster CSV." />
+    <PageHeader title="Integrations" description="Preview the roster CSV and its demo summary before syncing club memberships." />
     <IntegrationPanel key={`${actor.userId}:${actor.activeOrgId}`} connectors={connectors.map((connector) => ({
       ...connector, lastSyncAt: connector.lastSyncAt?.toISOString() ?? null,
     }))} rosterPreview={rosterPreview} />
