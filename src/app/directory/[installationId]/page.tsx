@@ -5,8 +5,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { directory } from '@/lib/distribution';
 import { getActor } from '@/lib/identity';
-import { submitPublicRun } from './actions';
-import { PublicRun } from './public-run';
+import { RunWorkspace } from '@/components/inspector';
+import { getRunPageData, isDemoRuntime } from '@/lib/documents/run-page';
 
 export default async function PublicAgentPage({ params }: { readonly params: Promise<{ installationId: string }> }) {
   const actor = await getActor();
@@ -26,14 +26,14 @@ export default async function PublicAgentPage({ params }: { readonly params: Pro
       <AlertDescription>It may have been turned off or its audience may have changed. <Link href="/directory" className="text-primary underline">Return to the directory</Link> to choose an available agent.</AlertDescription>
     </div></Alert>
   </>;
+  const data = await getRunPageData(actor, agent.orgId, agent.installationId);
+  if (!data?.workspace) return <><PageHeader title="Agent unavailable" /><p>This agent is no longer available. Return to the directory and choose an available agent.</p></>;
   return <>
     <Link href="/directory" className="mb-4 inline-flex min-h-8 items-center text-primary underline underline-offset-4">Back to directory</Link>
     <PageHeader title={agent.name} description={agent.purpose} />
     <div className="mb-6 flex flex-wrap items-center gap-3 text-muted-foreground">
       <span>{agent.orgName}</span><Badge><Users aria-hidden="true" />All students</Badge><span>Template v{agent.templateVersion}</span>
     </div>
-    <PublicRun key={`${actor.userId}:${actor.activeOrgId}:${agent.installationId}`} agentName={agent.name}
-      isMock={(process.env.AGENT_RUNTIME ?? 'mock') === 'mock'}
-      action={submitPublicRun.bind(null, agent.installationId, actor.userId)} />
+    <RunWorkspace key={`${actor.userId}:${actor.activeOrgId}:${agent.installationId}`} installationId={agent.installationId} agentName={agent.name} demoRuntime={isDemoRuntime()} config={data.workspace} />
   </>;
 }

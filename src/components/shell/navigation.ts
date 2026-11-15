@@ -15,7 +15,7 @@ export function isNavItemActive(pathname: string, item: NavItem): boolean {
 /** `activeOrgIsUsg` is the kind of the actor's active org (read by the shell), not a seed id. */
 export function navigationFor(actor: Actor, clubs: readonly Pick<MyAgentsClub, 'orgId' | 'orgName'>[], activeOrgIsUsg: boolean): Scope[] {
   const scopes: Scope[] = [
-    { href: '/me/agents', label: 'My agents', match: '/me', items: [{ href: '/me/agents', label: 'My agents' }] },
+    { href: '/me/agents', label: 'My agents', match: '/me', items: [{ href: '/me/agents', label: 'My agents' }, { href: '/me/usage', label: 'Usage' }] },
     { href: '/directory', label: 'Directory', match: '/directory', items: [{ href: '/directory', label: 'All public agents' }] },
   ];
   if (!actor.userId) return scopes;
