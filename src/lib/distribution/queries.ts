@@ -42,6 +42,7 @@ export interface AgentFilter {
 
 export interface LoadedAgent {
   agent: ResolvedAgent;
+  memberModels: { readonly fixed: ModelClass | null; readonly defaultClass: ModelClass; readonly allowed: ModelClass[] };
   orgName: string;
   /** How hard USG pushes the template: a `required` agent cannot be switched off (§8). */
   distribution: 'required' | 'default' | 'optional';
@@ -79,6 +80,10 @@ export async function loadAgents(filter: AgentFilter): Promise<LoadedAgent[]> {
       if (filter.enabledOnly && agent.status !== 'enabled') continue;
       loaded.push({
         agent, orgName, distribution, updateAvailable,
+        memberModels: (() => {
+          const inherited = composeEffectiveAgent({ ...input, installation: { ...input.installation, modelClass: null } });
+          return { fixed: input.installation.modelClass, defaultClass: inherited.modelClass, allowed: inherited.allowedModelClasses };
+        })(),
         canPublishPublic: input.version.audience === 'public' && input.club.policy.allowPublicAgents,
       });
     } catch (err) {

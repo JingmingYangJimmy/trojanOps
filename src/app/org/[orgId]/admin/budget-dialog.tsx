@@ -13,6 +13,7 @@ import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ClubAdmin, ClubMember } from '@/lib/distribution';
 import { budgetExplanation, budgetSaved, dollars, parseDollars, writeErrorMessage } from './admin-view';
+import { creditLabel } from '@/lib/gateway/prices';
 
 export function BudgetButton({ data, member, onSaved }: {
   data: ClubAdmin;
@@ -29,6 +30,7 @@ export function BudgetButton({ data, member, onSaved }: {
   const [invalid, setInvalid] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [confirmZero, setConfirmZero] = useState(false);
   const fieldId = `limit-${member.userId}`;
   const errorId = `${fieldId}-error`;
   const titleId = `${fieldId}-title`;
@@ -40,6 +42,7 @@ export function BudgetButton({ data, member, onSaved }: {
     setTouched(false);
     setInvalid(null);
     setFailure(null);
+    setConfirmZero(false);
     dialog.current?.showModal();
   }
 
@@ -52,6 +55,7 @@ export function BudgetButton({ data, member, onSaved }: {
       return;
     }
     setInvalid(null);
+    if (parsed.micro === 0 && !confirmZero) { setConfirmZero(true); return; }
     setFailure(null);
     startTransition(async () => {
       try {
@@ -109,6 +113,7 @@ export function BudgetButton({ data, member, onSaved }: {
               aria-invalid={invalid ? true : undefined}
               onChange={(current) => {
                 setAmount(current.target.value);
+                setConfirmZero(false);
                 setTouched(true);
                 if (invalid) setInvalid(null);
               }}
@@ -128,6 +133,8 @@ export function BudgetButton({ data, member, onSaved }: {
           )}
         </div>
 
+        <p className="mt-2 text-sm text-muted-foreground" aria-live="polite">{'micro' in parseDollars(amount, data.clubLimitMicro) ? (() => { const value = parseDollars(amount, data.clubLimitMicro); return 'micro' in value ? `${amount ? `$${dollars(value.micro)}` : ''} = ${creditLabel(value.micro)}. ` : ''; })() : ''}Up to {data.org.name}&apos;s budget, ${dollars(data.clubLimitMicro)}.</p>
+        {confirmZero && <p role="alert" className="mt-4 rounded-md border border-primary p-3">Set {member.displayName}&apos;s allowance to $0.00? Their next run in {data.org.name} will be blocked until you raise it.</p>}
         {failure && (
           <p role="alert" className="mt-4 flex items-start gap-2 rounded-md border border-primary p-3">
             <AlertCircle aria-hidden className="mt-0.5 size-4 shrink-0 text-primary" />
@@ -142,7 +149,7 @@ export function BudgetButton({ data, member, onSaved }: {
             aria-disabled={pending}
             className="aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
           >
-            {pending ? 'Saving…' : 'Save limit'}
+            {pending ? 'Saving…' : confirmZero ? 'Confirm $0.00 allowance' : 'Save limit'}
           </Button>
         </div>
       </dialog>

@@ -37,6 +37,7 @@ const position = (patch: Partial<ClubPosition> = {}): ClubPosition => ({
 });
 
 const agent = (patch: Partial<CatalogEntry> = {}): CatalogEntry => ({
+  memberModels: { fixed: null, defaultClass: 'standard', allowed: ['economy', 'standard'] },
   installationId: 'i-funding',
   templateSlug: 'funding-precheck',
   name: 'Funding pre-check',

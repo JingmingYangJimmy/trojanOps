@@ -17,6 +17,7 @@ const USD = 1_000_000;
 const signedOut: Actor = { userId: null, activeOrgId: null, positions: [], grants: [] };
 
 const entry = (patch: Partial<CatalogEntry> = {}): CatalogEntry => ({
+  memberModels: { fixed: null, defaultClass: 'economy', allowed: ['economy'] },
   installationId: 'i1',
   templateSlug: 'recruiting-qa',
   name: 'Recruiting Q&A',
