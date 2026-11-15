@@ -23,12 +23,15 @@ function Citation({ source, n, tier, installationId, orgId, onInspect, compact }
   const [access, setAccess] = useState<{ allowed: boolean; reason: string } | null>(null);
   const [open, setOpen] = useState(false);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const request = useRef(0);
   useEffect(() => () => { if (hoverTimer.current) clearTimeout(hoverTimer.current); }, []);
   function keepOpen() { if (hoverTimer.current) clearTimeout(hoverTimer.current); }
   function leave() { keepOpen(); hoverTimer.current = setTimeout(() => show(false), 200); }
   function show(value: boolean) {
     setOpen(value);
-    if (value && installationId) void citationAccess(installationId, source.documentId).then(setAccess, () => setAccess({ allowed: false, reason: 'Could not check access. Close this source and try again.' }));
+    const current = ++request.current;
+    if (value) setAccess(null);
+    if (value && installationId) void citationAccess(installationId, source.documentId).then((next) => { if (current === request.current) setAccess(next); }, () => { if (current === request.current) setAccess({ allowed: false, reason: 'Could not check access. Close this source and try again.' }); });
   }
   const allowed = !installationId || access?.allowed;
   return <Popover open={open} onOpenChange={show}><PopoverTrigger asChild><button type="button" onPointerEnter={(e) => { if (e.pointerType === 'mouse') { keepOpen(); show(true); } }} onPointerLeave={(e) => { if (e.pointerType === 'mouse') leave(); }} onFocus={(e) => { if (!open && e.currentTarget.matches(':focus-visible')) show(true); }}

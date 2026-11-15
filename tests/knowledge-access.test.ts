@@ -19,6 +19,7 @@ describe.skipIf(!probe)('knowledge permissions with the real database', () => {
     const treasurer = await testRetrieval(sam, ORG.startup, { ...input, subject: 'treasurer' });
     expect(treasurer.hits[0].documentId).toBe(DOCUMENT.spring2026Budget);
     expect(treasurer.hits[0].score).toBe(1);
+    expect(treasurer.byPosition.find((p) => p.key === 'treasurer')?.count).toBe(8);
   }));
   it('refuses a non-president before exposing retrieval candidates', async () => {
     await expect(testRetrieval(await actorFor(USER.casey, ORG.startup), ORG.startup, { installationId: INSTALLATION.startupHandoff, question: 'budget', subject: 'member', topK: 3, scoreThreshold: 0.3 })).rejects.toMatchObject({ status: 403 });

@@ -1,5 +1,5 @@
 // Owner: A. The mock runtime (§7): no model call. Lists the accessible documents, quotes the first
-// sentence of up to three, adds the rule-pack line, costs a flat $0.01.
+// sentence of up to three and adds the rule-pack line. Cost follows the chosen demo model class.
 import { z } from 'zod';
 import type { AgentRuntime } from '../contracts';
 import { priceMicro } from '../gateway/prices';

@@ -32,6 +32,6 @@ export async function testRetrieval(viewer: Actor, orgId: string, raw: unknown) 
   const scored: RetrievalHit[] = candidates.map((h) => ({ ...h, reason: matrix.cells[subject.key]?.[h.documentId] ?? 'not_granted' }));
   return { agent: { id: agent.installationId, name: agent.name }, subject, testedAt: now().toISOString(),
     hits: scored.filter((h) => h.reason === 'allowed').slice(0, input.topK), keptOut: scored.filter((h) => h.reason !== 'allowed'),
-    byPosition: matrix.subjects.map((s) => ({ ...s, count: Math.min(input.topK, candidates.filter((h) => matrix.cells[s.key]?.[h.documentId] === 'allowed').length) })),
+    byPosition: matrix.subjects.map((s) => ({ ...s, count: candidates.filter((h) => matrix.cells[s.key]?.[h.documentId] === 'allowed').length })),
   };
 }

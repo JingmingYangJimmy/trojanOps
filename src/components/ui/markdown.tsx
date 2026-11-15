@@ -61,7 +61,7 @@ export function Markdown({ text, renderCitation }: MarkdownProps) {
         items.push(<li key={i}>{inline(item[1], renderCitation)}</li>);
         i++;
       }
-      blocks.push(createElement(list[1] ? 'ul' : 'ol', { key, className: `${list[1] ? 'list-disc' : 'list-decimal'} space-y-2 pl-6` }, items));
+      blocks.push(createElement(list[1] ? 'ul' : 'ol', { key, ...(!list[1] ? { start: Number.parseInt(line, 10) } : {}), className: `${list[1] ? 'list-disc' : 'list-decimal'} space-y-2 pl-6` }, items));
       continue;
     }
     const paragraph = [line];

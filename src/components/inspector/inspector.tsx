@@ -44,7 +44,7 @@ export function Inspector({ inspector, highlightedId }: { inspector: RunInspecto
   const quota = Object.entries(inspector.quotaRemainingMicro);
 
   return (
-    <aside aria-label="Run inspector" className="w-[384px] shrink-0 border-l border-border bg-background text-[14px] leading-5">
+    <aside aria-label="Run inspector" className="w-full max-w-[384px] min-w-0 shrink-0 border-l border-border bg-background text-[14px] leading-5">
       <Section title="Run grants">
         {inspector.runGrants.length === 0 ? <Empty>This run had no grants.</Empty> : (
           <ul>

@@ -26,4 +26,7 @@ describe('safe answer Markdown', () => {
     expect(html).not.toContain('Source 2');
     expect(html).not.toContain('Source 3');
   });
+  it('preserves the starting number of an ordered list', () => {
+    expect(render('3. Third cited document')).toMatch(/<ol\b[^>]*\bstart="3"/);
+  });
 });
