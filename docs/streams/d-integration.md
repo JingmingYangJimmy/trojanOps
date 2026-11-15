@@ -92,10 +92,14 @@ Say "mock runtime" and keep the Mock labels visible. If a real agent misbehaves,
 
 ## Connector CSV views and demo summaries
 
-The Integrations overview retains all five connector rows, each with **View details** linking to
+The **Management** overview (at the existing `/usg/integrations` URL) contains a **Clubs and quotas**
+row linking to the existing `/usg/clubs` console, plus all five connector rows with **View details** linking to
 `/usg/integrations?connector=<kind>`. The existing page handles the selection after USG-admin
 authorization. Each selection renders a full-page CSV projection and its own **AI summary · Demo**;
 the summary uses local text and current counts, not a model call. Back returns to the overview.
+The USG sidebar groups club quotas under Management rather than listing them separately. Management
+remains highlighted while the club-quota console is open. This changes navigation and labels only;
+club quotas, policy permissions and route contracts are unchanged.
 
 The datasets are actual current platform data, not fabricated CSV fixtures:
 

@@ -9,11 +9,11 @@ import type { ConnectorPreviewState } from '@/lib/connectors/preview';
 
 /** Each connector supplies its own CSV columns, source rows and summary. No write runs here. */
 export function ConnectorPreviewPanel({ preview }: { readonly preview: ConnectorPreviewState }) {
-  const back = <Link href="/usg/integrations" className={buttonVariants({ variant: 'secondary' })}>Back to integrations</Link>;
+  const back = <Link href="/usg/integrations" className={buttonVariants({ variant: 'secondary' })}>Back to management</Link>;
   if (preview.status === 'unavailable') {
     return <><PageHeader title={preview.title} action={back} /><Alert variant="destructive"><CircleAlert aria-hidden="true" /><div>
       <AlertTitle>CSV preview unavailable</AlertTitle>
-      <AlertDescription>Could not read this connector’s source data. Check the source and reload the page to retry. Other connectors remain available from Integrations.</AlertDescription>
+      <AlertDescription>Could not read this connector’s source data. Check the source and reload the page to retry. Other connectors remain available from Management.</AlertDescription>
     </div></Alert></>;
   }
   const { data } = preview;

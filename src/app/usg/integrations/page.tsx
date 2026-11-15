@@ -20,12 +20,12 @@ export default async function IntegrationsPage({ searchParams }: {
     if (!(error instanceof AppError)) throw error;
     if (error.error.code !== 'forbidden' && error.error.code !== 'unauthenticated') throw error;
     return <>
-      <PageHeader title="Integrations" />
+      <PageHeader title="Management" />
       <Alert>
         <LockKeyhole aria-hidden="true" />
         <div>
           <AlertTitle>USG administrator access required</AlertTitle>
-          <AlertDescription>Sign in with a USG administrator account to review connectors and sync the roster. Contact a USG administrator if you need access.</AlertDescription>
+          <AlertDescription>Sign in with a USG administrator account to review management areas and sync the roster. Contact a USG administrator if you need access.</AlertDescription>
         </div>
       </Alert>
     </>;
@@ -38,7 +38,7 @@ export default async function IntegrationsPage({ searchParams }: {
   }
   const connectors = await listConnectors();
   return <>
-    <PageHeader title="Integrations" description="Open each connector’s current data as a CSV table with a demo summary." />
+    <PageHeader title="Management" description="Review platform data and manage club quotas and policy." />
     <IntegrationPanel key={`${actor.userId}:${actor.activeOrgId}`} connectors={connectors.map((connector) => ({
       ...connector, lastSyncAt: connector.lastSyncAt?.toISOString() ?? null,
     }))} />

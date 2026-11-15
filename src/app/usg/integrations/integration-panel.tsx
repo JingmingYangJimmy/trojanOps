@@ -65,7 +65,7 @@ export function IntegrationPanel({ connectors }: {
       </div>
     </Alert>}
     <div className="flex flex-wrap items-center justify-between gap-4">
-      <p className="text-muted-foreground">Each connector has its own CSV preview and demo summary.</p>
+      <p className="text-muted-foreground">Preview connector data or manage clubs and quotas.</p>
       <Button type="button" onClick={sync} disabled={pending} aria-busy={pending} className="min-w-36 border border-transparent disabled:border-input disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"><RefreshCw aria-hidden="true" />{pending ? 'Syncing roster' : 'Sync roster'}</Button>
     </div>
     <div aria-live="polite" aria-atomic="true">
@@ -85,12 +85,12 @@ export function IntegrationPanel({ connectors }: {
         </Table>
       </section>}
     </div>
-    <section aria-labelledby="platform-connectors-heading" className="space-y-3">
-      <h2 id="platform-connectors-heading" className="text-xl font-semibold">Platform connectors</h2>
+    <section aria-labelledby="management-areas-heading" className="space-y-3">
+      <h2 id="management-areas-heading" className="text-xl font-semibold">Management areas</h2>
       <Table>
-        <TableCaption>Platform-wide demo implementations. Demo ready is not a live health check; last sync applies to roster imports.</TableCaption>
+        <TableCaption>Platform-wide connectors and club settings. Demo ready is not a live health check; last sync applies to roster imports.</TableCaption>
         <TableHeader><TableRow>
-          <TableHead>Kind</TableHead><TableHead>Implementation</TableHead><TableHead>Status</TableHead>
+          <TableHead>Area</TableHead><TableHead>Source</TableHead><TableHead>Status</TableHead>
           <TableHead>Last sync</TableHead><TableHead>Operation</TableHead><TableHead>Action</TableHead>
         </TableRow></TableHeader>
         <TableBody>{connectors.map((connector) => {
@@ -105,7 +105,14 @@ export function IntegrationPanel({ connectors }: {
             <TableCell className="whitespace-nowrap text-muted-foreground">{operation[connector.kind]}</TableCell>
             <TableCell><Link href={`/usg/integrations?connector=${connector.kind}`} className={buttonVariants({ variant: 'secondary', size: 'sm' })} aria-label={`View ${labels[connector.kind].toLowerCase()} details`}>View details</Link></TableCell>
           </TableRow>;
-        })}</TableBody>
+        })}
+          <TableRow>
+            <TableHead scope="row">Clubs and quotas</TableHead>
+            <TableCell>Platform settings</TableCell><TableCell className="text-muted-foreground">Managed in app</TableCell>
+            <TableCell className="text-muted-foreground">N/A</TableCell><TableCell>Quotas and policy</TableCell>
+            <TableCell><Link href="/usg/clubs" className={buttonVariants({ variant: 'secondary', size: 'sm' })} aria-label="View clubs and quotas">View details</Link></TableCell>
+          </TableRow>
+        </TableBody>
       </Table>
     </section>
   </div>;
