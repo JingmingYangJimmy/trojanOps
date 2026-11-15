@@ -12,10 +12,10 @@ import type { SeedDb } from './index';
 import { INSTALLATION, ORG, RULE_PACK, TEMPLATE, USER } from './ids';
 import pack from '../../rules/packs/usg-funding.v1.json';
 
-// Kept in step with src/lib/distribution/fixtures.ts: the stubs stand in for exactly these rows
-// until WP-5 resolves installations from the database (ids.ts).
+// The rows WP-5 resolves from the database (src/lib/distribution/queries.ts).
+// Ids come from db/seed/ids.ts, which tests address these rows by.
 //
-// TODO(verify): every version seeds `tools: []`, matching the fixtures. §7 step 7 and C's WP-9
+// TODO(verify): every version seeds `tools: []`. §7 step 7 and C's WP-9
 // (pending actions) need at least one write tool — probably `submit_to_queue` on funding-precheck.
 // Adding it here changes what A's gateway sees, so it is a team call, not a quiet edit.
 
@@ -236,7 +236,7 @@ export async function seedDistribution(db: SeedDb): Promise<void> {
   ]);
 
   // No override columns are set: every installation inherits its version, so the
-  // effective config equals the version and matches the fixtures.
+  // effective config equals the version.
   await db.insert(agentInstallations).values([
     {
       id: INSTALLATION.startupFundingPrecheck,
