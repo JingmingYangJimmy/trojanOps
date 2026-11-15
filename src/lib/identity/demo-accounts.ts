@@ -6,7 +6,7 @@
 export const DEMO_ACCOUNT_ORDER = ['avery', 'sam', 'taylor', 'jordan', 'casey', 'lee', 'morgan', 'riley'] as const;
 
 /** The one password every demo account accepts. Not a secret: it ships to the browser. */
-export const DEMO_PASSWORD = 'demo123';
+export const DEMO_PASSWORD = 'fighton';
 
 /** Memorable sign-in aliases for the seeded demo roles. */
 export const DEMO_SIGN_IN_IDS: ReadonlyMap<string, string> = new Map([
