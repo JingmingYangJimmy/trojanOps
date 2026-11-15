@@ -14,9 +14,11 @@ Borders carry structure; only overlays have shadow-overlay. All controls have vi
 
 ## Layout
 
-Layout: chat and document detail use the existing sticky-aside pattern: a fluid main column
-capped at 720px, a 384px inspector, a 24px gap, and document-owned vertical scrolling. Columns
-stack on narrow screens. The composer sticks to the bottom of its transcript column. Wide
+Layout: the chat follows the user's Dify-style override: user messages align right in neutral
+message surfaces; AI answers align left under an explicit AI label. A bounded 720px chat window
+owns transcript scrolling, with its composer fixed below the scroll area. A 384px inspector with
+its own overflow sits across a 24px gap. Document detail uses a sticky aside. Columns stack on
+narrow screens. Wide
 tables own horizontal scrolling. Retrieval uses a 360px form beside fluid results and stacks
 when narrow. The application shell and disclaimer remain in document flow.
 

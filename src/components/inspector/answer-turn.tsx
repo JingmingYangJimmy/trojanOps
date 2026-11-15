@@ -85,7 +85,7 @@ export function AnswerTurn(p: AnswerTurnProps) {
     } catch (error) { if (error instanceof Error) { setCopyError(true); setCopied(false); } else throw error; }
   }
   return <article aria-busy={p.playing || undefined}>
-    <div className="mb-3 flex flex-wrap items-center gap-2"><p className="text-xs font-semibold text-muted-foreground">{p.agentName}</p>
+    <div className="mb-3 flex flex-wrap items-center gap-2"><p className="text-[14px] font-semibold leading-5 text-primary">AI · {p.agentName}</p>
       <span className="rounded-sm border border-border px-2 py-1 text-xs">{p.demoRuntime ? 'Demo runtime: placeholder answer' : 'AI-generated'}</span>
       {highest !== 'public' && <span title={`This answer quotes ${tierLabels[highest]} documents. Check before sharing it outside the permitted group.`} className="ml-auto text-xs font-semibold"><Lock aria-hidden className="mr-1 inline size-3" />Uses {tierLabels[highest]} information</span>}
     </div>

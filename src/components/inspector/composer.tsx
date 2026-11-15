@@ -33,7 +33,7 @@ export function Composer({ textareaRef, ...p }: ComposerProps) {
   const reset = quota ? (daily ? 'resets at midnight PT' : `resets ${new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', month: 'short', day: 'numeric' }).format(new Date(quota.resetsAt))}`) : '';
   const low = quota && quota.remainingMicro > 0 && priceMicro(p.model) > quota.remainingMicro;
   const economyAffordable = p.config?.models.allowed.some((m) => m.modelClass === 'economy' && m.priceMicro <= (quota?.remainingMicro ?? 0));
-  return <form noValidate onSubmit={(e) => { e.preventDefault(); p.onRun(); }} className="sticky bottom-0 z-10 mt-6 border-t border-border bg-background py-4">
+  return <form noValidate onSubmit={(e) => { e.preventDefault(); p.onRun(); }} className="shrink-0 border-t border-border bg-background px-4 pt-3 pb-2">
     {p.config?.blockedMessage && <p className="mb-3 flex items-start gap-2 border border-primary p-3 text-primary"><AlertCircle aria-hidden className="mt-0.5 size-4 shrink-0" />{p.config.blockedMessage}</p>}
     <div className="rounded-md border border-input p-3">
       <label htmlFor={id} className="mb-1 block font-semibold">Message</label>

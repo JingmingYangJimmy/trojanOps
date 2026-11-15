@@ -55,7 +55,7 @@ describe('run page markup', () => {
   it('labels turns "You" and with the agent name, as plain text', () => {
     const html = transcript();
     expect(html).toContain('>You</p>');
-    expect(html).toContain('>Club handoff</p>');
+    expect(html).toContain('>AI · Club handoff</p>');
     expect(html).toContain('What did the board decide last meeting?');
     expect(html).toContain('whitespace-pre-wrap');
     expect(html).toContain('−1 credit · Read 1 of 1 permitted documents · Audit #1042');
