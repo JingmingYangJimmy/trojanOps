@@ -10,6 +10,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { DepartmentDashboard } from '@/lib/directory/types';
 import { budgetText, count, dollars, percentOf } from '@/lib/directory/view';
+import { AddMemberButton, DeleteDepartmentButton, EditDepartmentButton, RemoveMemberButton } from './department-actions';
 import { EventsSection, UpcomingPanel } from './events';
 import { DashboardHeader } from './header';
 import { clubPath, departmentTabs, pickTab, pickWhen, showAllUpdates, type SearchParams } from './model';
@@ -28,6 +29,9 @@ export function DepartmentDashboardView({ data, base, searchParams }: {
   const { club, department, viewer } = data;
   const tabs = departmentTabs(data, base);
   const active = pickTab(tabs, searchParams.tab);
+  const manage = viewer.president;
+  // Back to the list the viewer came from: the active club's departments, or the club's tab.
+  const listHref = base.startsWith('/directory/departments/') ? '/directory/departments' : `${clubPath(club.id)}?tab=departments`;
 
   return (
     <>
@@ -39,12 +43,22 @@ export function DepartmentDashboardView({ data, base, searchParams }: {
           <span className="inline-flex items-center gap-1.5 tabular-nums"><Users aria-hidden="true" className="size-4" />{count(data.members.length, 'member')}</span>
           <span>Lead: {data.lead?.name ?? 'No lead yet'}</span>
         </>}
-        actions={viewer.president ? <Link href={`/org/${club.id}/admin`} className={buttonVariants()}>Administration</Link> : undefined}
+        actions={manage ? <>
+          <EditDepartmentButton orgId={club.id} department={department} leadId={data.lead?.userId ?? null} members={data.members} />
+          <DeleteDepartmentButton orgId={club.id} slug={department.slug} name={department.name} memberCount={data.members.length} listHref={listHref} />
+          <Link href={`/org/${club.id}/admin`} className={buttonVariants()}>Administration</Link>
+        </> : undefined}
       />
       <TabLinks label={`${department.name} sections`} tabs={tabs} active={active} />
       {active === 'about' && <AboutTab data={data} base={base} showAll={showAllUpdates(searchParams.updates)} />}
       {active === 'events' && <EventsSection events={data.events} when={pickWhen(searchParams.when)} base={base} showDepartment={false} />}
-      {active === 'members' && <MembersTable members={data.members} label={`${department.name} members`} leadId={data.lead?.userId} />}
+      {active === 'members' && <MembersTable members={data.members} label={`${department.name} members`} leadId={data.lead?.userId}
+        action={manage && data.candidates
+          ? <AddMemberButton orgId={club.id} slug={department.slug} name={department.name} candidates={data.candidates} />
+          : undefined}
+        rowAction={manage
+          ? (m) => <RemoveMemberButton orgId={club.id} slug={department.slug} departmentName={department.name} person={m} lead={m.userId === data.lead?.userId} />
+          : undefined} />}
     </>
   );
 }
