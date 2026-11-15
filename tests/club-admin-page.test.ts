@@ -6,11 +6,15 @@ import {
   parseDollars, transferConfirmation, transferState, transferUnavailable,
 } from '@/app/org/[orgId]/admin/admin-view';
 import {
-  clubAdmin, transferCandidates,
+  clubAdmin, transferCandidates, effectiveAgent, canUse,
   type CatalogEntry, type ClubAdmin, type ClubMember, type ClubPosition,
 } from '@/lib/distribution';
-import { ORG, USER } from '@db/seed/ids';
-import { actorFor, appSql, closeAppDb } from './db';
+import { ORG, USER, INSTALLATION, DOCUMENT } from '@db/seed/ids';
+import { actorFor, appSql, closeAppDb, inRolledBackApp } from './db';
+
+import { transferPosition } from '@/lib/lifecycle/transfer';
+import { capGrants, grantsFor } from '@/lib/authz';
+import { listAccessibleDocuments } from '@/lib/documents/access';
 
 const USD = 1_000_000;
 
@@ -198,10 +202,12 @@ describe('the succession confirmation (D7)', () => {
 
   // Document grants follow the position (§5 allowed_positions), so officer documents move even
   // through an agent whose audience is "All members" — the agent list above does not cover them.
-  it('says that the position’s documents move with it', () => {
-    expect(copy.points).toContain(
-      "Documents granted to Treasurer move with the office: Jordan Reyes will be able to read them through this club's agents, and Taylor Brooks will not.",
-    );
+  it('describes the transferred grant without promising complete document access or revocation', () => {
+    const text = copy.points.join(' ');
+    expect(text).toContain('position grant');
+    expect(text).toContain('Other positions');
+    expect(text).toContain("sources and max tier still apply");
+    expect(text).not.toContain('will not.');
   });
 
   it('counts only the agents the position actually opens', () => {
@@ -210,7 +216,7 @@ describe('the succession confirmation (D7)', () => {
     // A turned-off agent gives nobody access, so a succession does not move it.
     expect(agentsForPosition([agent({ status: 'disabled' })], 'treasurer')).toHaveLength(0);
     expect(transferConfirmation(club({ agents: [] }), position(), jordan).points[1])
-      .toBe("No agent Startup Club has switched on is limited to Treasurer, so nobody's agents change.");
+      .toBe('Jordan Reyes gains no additional enabled agents.');
   });
 
   it('does not promise an agent the new holder can already run', () => {
@@ -219,7 +225,7 @@ describe('the succession confirmation (D7)', () => {
       positions: [{ slug: 'member', name: 'Member' }, { slug: 'president', name: 'President' }],
     });
     const points = transferConfirmation(club({ members: [president, member()] }), position(), president).points;
-    expect(points[1]).toBe('Sam Okafor can already run Funding pre-check through another position, so they gain no agent.');
+    expect(points[1]).toBe('Sam Okafor gains no additional enabled agents.');
   });
 
   it('does not claim a loss the outgoing holder keeps through another position', () => {
@@ -227,16 +233,30 @@ describe('the succession confirmation (D7)', () => {
       positions: [{ slug: 'treasurer', name: 'Treasurer' }, { slug: 'president', name: 'President' }],
     });
     const points = transferConfirmation(club({ members: [jordan, both] }), position(), jordan).points;
-    expect(points[2]).toBe('Taylor Brooks keeps Funding pre-check through another position.');
+    expect(points[2]).toBe('Taylor Brooks keeps access to the same enabled agents.');
+  });
+
+  it('includes member access lost with the last office even when no position agent is enabled', () => {
+    const sam = member({ userId: 'u-sam', displayName: 'Sam', positions: [{ slug: 'president', name: 'President' }] });
+    const presidency = position({ slug: 'president', name: 'President', holders: [{ userId: sam.userId, displayName: sam.displayName }] });
+    const agents = [agent({ status: 'retired' }),
+      agent({ installationId: 'handoff', name: 'Club handoff', audience: 'members', usableBy: [] }),
+      agent({ installationId: 'public', name: 'Recruiting Q&A', audience: 'public', usableBy: [], maxTier: 'public' }),
+      agent({ installationId: 'paused', name: 'Paused agent', audience: 'members', usableBy: [], status: 'disabled' })];
+    const points = transferConfirmation(club({ members: [sam, jordan], agents }), presidency, jordan).points;
+    expect(points).toContain('Sam loses Club handoff.');
+    expect(points.join(' ')).not.toContain("nobody's agents change");
+    expect(points.join(' ')).not.toContain('loses Recruiting Q&A');
+    expect(points.join(' ')).not.toContain('Paused agent');
+    expect(points.join(' ')).not.toContain('Funding pre-check');
   });
 
   it('handles a vacant office without inventing an outgoing holder', () => {
     const points = transferConfirmation(club(), position({ holders: [] }), jordan).points;
     expect(points[0]).toBe('Jordan Reyes becomes Treasurer of Startup Club. No one holds it today.');
     // The documents sentence names no outgoing holder either.
-    expect(points).toContain(
-      "Documents granted to Treasurer move with the office, so Jordan Reyes will be able to read them through this club's agents.",
-    );
+    expect(points.join(' ')).toContain('Jordan Reyes gains the Treasurer position grant');
+    expect(points.join(' ')).not.toContain('loses that position grant');
     expect(points.join(' ')).not.toContain('will not.');
     expect(points).toHaveLength(4);
   });
@@ -261,4 +281,33 @@ describe.skipIf(!probe)('the admin page on the seeded club', () => {
     expect(points[1]).toBe('Jordan gains Funding pre-check.');
     expect(points[2]).toBe('Taylor loses Funding pre-check.');
   });
+});
+
+
+// Regressions for PR #27 review: confirmation must match actual membership/RLS behavior.
+describe.skipIf(!probe)('succession confirmation · permission regressions', () => {
+  it('does not promise document revocation when the outgoing holder retains President', () => inRolledBackApp(async () => {
+    await transferPosition(await actorFor(USER.sam, ORG.startup), ORG.startup, 'treasurer', USER.sam);
+    const data = (await clubAdmin(await actorFor(USER.sam, ORG.startup), ORG.startup))!;
+    const outgoingOffice = data.positions.find(p => p.slug === 'treasurer')!;
+    const recipient = data.members.find(m => m.userId === USER.jordan)!;
+    const confirmation = transferConfirmation(data, outgoingOffice, recipient);
+    expect(confirmation.points.join(' ')).not.toContain('Sam will not.');
+    await transferPosition(await actorFor(USER.sam, ORG.startup), ORG.startup, 'treasurer', USER.jordan);
+    const actor = await actorFor(USER.sam, ORG.startup);
+    const agent = await effectiveAgent(INSTALLATION.startupHandoff);
+    const grants = capGrants(await grantsFor(USER.sam, ORG.startup), ORG.startup, agent.maxTier);
+    const documents = await listAccessibleDocuments(actor, grants, agent);
+    expect(documents.some(d => d.id === DOCUMENT.spring2026Budget)).toBe(true);
+  }));
+
+  it('names the members agent actually lost when the outgoing president has no memberships left', () => inRolledBackApp(async () => {
+    const data = (await clubAdmin(await actorFor(USER.sam, ORG.startup), ORG.startup))!;
+    const confirmation = transferConfirmation(data, data.positions.find(p => p.slug === 'president')!, data.members.find(m => m.userId === USER.jordan)!);
+    const handoff = await effectiveAgent(INSTALLATION.startupHandoff);
+    expect((await canUse(USER.sam, handoff)).ok).toBe(true);
+    expect(confirmation.points.some(p => p.startsWith('Sam loses ') && p.includes('Club handoff'))).toBe(true);
+    await transferPosition(await actorFor(USER.sam, ORG.startup), ORG.startup, 'president', USER.jordan);
+    expect((await canUse(USER.sam, handoff)).ok).toBe(false);
+  }));
 });

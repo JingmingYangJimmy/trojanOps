@@ -175,8 +175,8 @@ export function holderLabel(position: ClubPosition): string {
     : 'Vacant';
 }
 
-/** The club's enabled agents that this position, and only a position, opens. These are the agents
- * a succession moves (D7); an agent open to all members or all students moves with nobody. */
+/** Enabled agents whose named-position audience includes this office. This is not the full
+ * effect of a succession: losing a person's final position also removes their members-agent access. */
 export function agentsForPosition(agents: CatalogEntry[], slug: string): CatalogEntry[] {
   return agents.filter(
     (agent) => agent.status === 'enabled' && agent.audience === 'positions' && agent.usableBy.includes(slug),
@@ -201,43 +201,57 @@ export interface TransferConfirmation {
 export function transferConfirmation(
   data: ClubAdmin, position: ClubPosition, to: ClubMember,
 ): TransferConfirmation {
-  const moving = agentsForPosition(data.agents, position.slug);
   const names = (list: CatalogEntry[]) => list.map((agent) => agent.name).join(', ');
-  const gained = moving.filter(
-    (agent) => !to.positions.some((held) => agent.usableBy.includes(held.slug)),
-  );
   const holder = position.holders[0] ?? null;
   const outgoing = holder ? data.members.find((m) => m.userId === holder.userId) ?? null : null;
-  const lost = outgoing
-    ? moving.filter((agent) => !outgoing.positions.some(
-      (held) => held.slug !== position.slug && agent.usableBy.includes(held.slug),
-    ))
-    : [];
+  const unchanged = holder?.userId === to.userId;
+  const incomingBefore = to.positions.map((held) => held.slug);
+  const incomingAfter = unchanged ? incomingBefore : [...new Set([...incomingBefore, position.slug])];
+  const outgoingBefore = outgoing?.positions.map((held) => held.slug) ?? [];
+  const outgoingAfter = unchanged ? outgoingBefore : outgoingBefore.filter((slug) => slug !== position.slug);
+
+  // Any active position makes a person a member (§5); no separate `member` row is guaranteed.
+  // Compare the whole audience before and after, including members agents when the last position
+  // ends. Public access is unchanged. This is only audience eligibility; the gateway still checks
+  // grants, source scope, max tier and budgets on every run.
+  const admitted = (agent: CatalogEntry, held: string[]) => {
+    if (agent.status !== 'enabled') return false;
+    if (agent.audience === 'public') return true;
+    if (agent.audience === 'members') return held.length > 0;
+    return held.some((slug) => agent.usableBy.includes(slug));
+  };
+  const gained = data.agents.filter(
+    (agent) => !admitted(agent, incomingBefore) && admitted(agent, incomingAfter),
+  );
+  const lost = data.agents.filter(
+    (agent) => admitted(agent, outgoingBefore) && !admitted(agent, outgoingAfter),
+  );
 
   const points = [
-    holder
-      ? `${to.displayName} becomes ${position.name} of ${data.org.name}, and ${holder.displayName} stops holding it.`
-      : `${to.displayName} becomes ${position.name} of ${data.org.name}. No one holds it today.`,
+    unchanged
+      ? `${to.displayName} already holds ${position.name} of ${data.org.name}, so this assignment changes nothing.`
+      : holder
+        ? `${to.displayName} becomes ${position.name} of ${data.org.name}, and ${holder.displayName} stops holding it.`
+        : `${to.displayName} becomes ${position.name} of ${data.org.name}. No one holds it today.`,
   ];
-  if (moving.length === 0) {
-    points.push(`No agent ${data.org.name} has switched on is limited to ${position.name}, so nobody's agents change.`);
-  } else {
-    points.push(gained.length > 0
-      ? `${to.displayName} gains ${names(gained)}.`
-      : `${to.displayName} can already run ${names(moving)} through another position, so they gain no agent.`);
-    if (lost.length > 0) points.push(`${holder?.displayName} loses ${names(lost)}.`);
-    else if (holder) points.push(`${holder.displayName} keeps ${names(moving)} through another position.`);
+  points.push(gained.length > 0
+    ? `${to.displayName} gains ${names(gained)}.`
+    : `${to.displayName} gains no additional enabled agents.`);
+  if (holder) {
+    points.push(outgoing
+      ? lost.length > 0
+        ? `${holder.displayName} loses ${names(lost)}.`
+        : `${holder.displayName} keeps access to the same enabled agents.`
+      : `${holder.displayName}'s current agent access could not be compared. Refresh the roster before transferring.`);
   }
-  // Document grants follow the position (§5 `allowed_positions`), so officer documents move even
-  // through agents whose audience is "All members" — the ones named above do not cover it. Saying
-  // "documents do not change" was false, and it contradicted D4 minutes earlier in the demo.
-  points.push(
-    holder
-      ? `Documents granted to ${position.name} move with the office: ${to.displayName} will be able to read them through this club's agents, and ${holder.displayName} will not.`
-      : `Documents granted to ${position.name} move with the office, so ${to.displayName} will be able to read them through this club's agents.`,
-  );
+  // The office grant changes, not an unconditional right to every office document: a remaining
+  // presidency or other position can still grant the same document, and an agent can read it only
+  // within its own source scope and tier ceiling (§5, §10).
+  points.push(unchanged
+    ? `Position grants do not change. Other positions can still grant document access; each agent's sources and max tier still apply.`
+    : `${to.displayName} gains the ${position.name} position grant in ${data.org.name}${holder ? `, and ${holder.displayName} loses that position grant` : ''}. Other positions can still grant document access; each agent's sources and max tier still apply.`);
   points.push('No document, installation or budget is edited.');
-  if (position.slug === 'president') {
+  if (position.slug === 'president' && !unchanged) {
     points.push(
       `You will no longer be able to manage ${data.org.name}. Only ${to.displayName} will be able to hand the presidency back.`,
     );
