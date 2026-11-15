@@ -142,10 +142,10 @@ describe('club home · the quota meter', () => {
     expect(usageSummary(usage(0, 0), 'Startup Club')).toMatchObject({
       percent: 100,
       attention: null,
-      blocked: 'Your monthly AI quota in Startup Club is used up ($0.00 of $0.00). Ask your president to raise it.',
+      blocked: 'Your allowance in Startup Club is 0 credits this month. Ask your club president to raise it.',
     });
     expect(usageSummary(usage(0.5 * USD, 0.5 * USD), 'Startup Club').blocked)
-      .toContain('($0.50 of $0.50)');
+      .toContain("You've used this month's 50 credits");
   });
 });
 
