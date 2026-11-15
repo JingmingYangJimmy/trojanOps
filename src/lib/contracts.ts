@@ -143,7 +143,7 @@ export type AuditAction =
   | 'template.publish' | 'template.distribute' | 'template.retire'
   | 'installation.update' | 'installation.rejected' | 'agent.publish_public'
   | 'org.provision' | 'roster.import' | 'connector.sync' | 'position.transfer'
-  | 'rule_pack.publish' | 'document.upload';
+  | 'rule_pack.publish' | 'document.upload' | 'document.access';
 
 export interface AuditEvent {
   actorUserId: string | null;

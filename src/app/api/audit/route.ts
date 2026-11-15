@@ -11,7 +11,7 @@ const ACTIONS = [
   'template.publish', 'template.distribute', 'template.retire',
   'installation.update', 'installation.rejected', 'agent.publish_public',
   'org.provision', 'roster.import', 'connector.sync', 'position.transfer',
-  'rule_pack.publish', 'document.upload',
+  'rule_pack.publish', 'document.upload', 'document.access',
 ] as const satisfies readonly AuditAction[];
 // Fails to compile when contracts gain an action this list lacks.
 const EVERY_ACTION: [Exclude<AuditAction, (typeof ACTIONS)[number]>] extends [never] ? true : never = true;

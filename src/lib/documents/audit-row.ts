@@ -28,6 +28,7 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   'position.transfer': 'Position transferred',
   'rule_pack.publish': 'Rule pack published',
   'document.upload': 'Document uploaded',
+  'document.access': 'Document access changed',
 };
 
 export interface AuditRow {

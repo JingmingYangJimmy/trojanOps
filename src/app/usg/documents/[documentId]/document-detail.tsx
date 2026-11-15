@@ -5,6 +5,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { CircleAlert } from 'lucide-react';
+import { EditAccessDialog } from '@/components/inspector/edit-access-dialog';
 import { PageHeader } from '@/components/shell/page-header';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -84,10 +85,12 @@ export function DocumentDetail({ data }: { data: UsgDocumentView }) {
     <div className="space-y-6">
       <dl className="flex flex-wrap gap-x-6 gap-y-2 border-b border-border pb-4">
         <div className="flex gap-2"><dt className="text-muted-foreground">Source</dt><dd>{document.sourceName}</dd></div>
-        <div className="flex gap-2"><dt className="text-muted-foreground">Readable by</dt><dd>{TIERS[document.tier].name}</dd></div>
+        <div className="flex gap-2"><dt className="text-muted-foreground">Readable by</dt><dd>{TIERS[document.tier].name}{document.tier === 'officers' ? ` (${data.whoCanRead})` : ''}</dd></div>
         <div className="flex gap-2"><dt className="text-muted-foreground">Version</dt><dd className="tabular-nums">v{document.version}</dd></div>
         <div className="flex gap-2"><dt className="text-muted-foreground">Used by</dt><dd><UsedByList users={usedBy} /></dd></div>
       </dl>
+      {data.accessEditor && <EditAccessDialog orgId={orgId} orgKind="usg" documentId={document.id} title={document.title}
+        access={data.accessEditor.access} positions={data.accessEditor.positions} />}
       <SuccessNotice message={mutation.success} />
       {editing ? <form onSubmit={review} noValidate className="space-y-4">
         <div><Label htmlFor="document-text">Text</Label>

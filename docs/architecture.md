@@ -419,7 +419,7 @@ export type AuditAction =
   | 'template.publish' | 'template.distribute' | 'template.retire'
   | 'installation.update' | 'installation.rejected' | 'agent.publish_public'
   | 'org.provision' | 'roster.import' | 'connector.sync' | 'position.transfer'
-  | 'rule_pack.publish' | 'document.upload';
+  | 'rule_pack.publish' | 'document.upload' | 'document.access';
 
 export interface AuditEvent {
   actorUserId: string | null;
@@ -633,6 +633,12 @@ Seeded templates (display names in UI copy):
   `read_grants`. `audit('document.upload')`.
 - **New version** (`publishDocumentVersion`): the manager replaces a document's text as version n+1;
   id, source, tier and grants stay. Agents read it on their next run. `audit('document.upload', {version})`.
+- **Change access** (`updateDocumentAccess`): the same manager changes an existing document's tier
+  and, for `officers`, positions, checked as at upload (`tierOptions`, the org's officer positions).
+  It runs in the manager's `withActor` scope, so `documents_update` (`app.manage_org`) applies and the
+  trigger recomputes `read_grants`. A document is one row whose text each version replaces, so the
+  change covers every version (decision 33). Library, runs and previews follow on the next request.
+  `audit('document.access', {version, fromTier, fromPositions, tier, allowedPositions})`.
 - **`listAccessibleDocuments(actor, runGrants, agent)`** (`documents/access.ts`): the RLS query
   used by the gateway's step 5. `agent` requires `sourceIds` and `maxTier`; the query runs as
   `withActor(actor, {grants: runGrants, sourceIds: agent.sourceIds, maxTier: agent.maxTier})`.
@@ -721,7 +727,7 @@ UI copy for `quota_exceeded`, by scope:
 - `template.publish`, `template.distribute`, `template.retire`
 - `installation.update`, `installation.rejected`, `agent.publish_public`
 - `org.provision`, `roster.import`, `connector.sync`, `position.transfer`
-- `rule_pack.publish`, `document.upload`
+- `rule_pack.publish`, `document.upload`, `document.access`
 
 USG admins see all metadata; presidents see their club. Document ids resolve to titles under the
 viewer's RLS; unreadable ones render as "Restricted document".
@@ -765,6 +771,7 @@ Every handler: `const actor = await getActor(req)` → one service call → JSON
 | PUT `/api/usg/club-policy/:orgId` | `distribution.setClubPolicy` | USG admin | B |
 | POST `/api/usg/rule-packs/:slug/versions` | `rules.publish` (unused by the UI) | USG admin | B |
 | POST `/api/orgs/:orgId/documents/:documentId/versions` | `documents.publishDocumentVersion` | president, USG admin (USG) | C |
+| PATCH `/api/orgs/:orgId/documents/:documentId/access` body `{ tier, allowedPositions }` | `documents.updateDocumentAccess` | president, USG admin (USG) | C |
 | POST `/api/orgs/:orgId/positions/:slug/transfer` | `lifecycle.transferPosition` | president | B |
 | GET/POST `/api/orgs/:orgId/documents` | `documents.library` | members (read via RLS), president or USG admin for USG (upload) | C |
 | GET `/api/orgs/:orgId/preview?installation=` | `documents.previewAccess` | president | C |
@@ -782,10 +789,10 @@ Pages (25):
 | `/usg/templates` | B |
 | `/usg/templates/[templateId]`: versions, distribution, target | B |
 | `/usg/clubs`: quotas, club policy | B |
-| `/usg/documents`, `/usg/documents/[documentId]`: USG's documents, versions, publish a new version | C |
+| `/usg/documents`, `/usg/documents/[documentId]`: USG's documents, versions, publish a new version, edit access | C |
 | `/org/[orgId]/agents/[installationId]`: run + inspector + pending actions | C |
 | `/org/[orgId]/documents` | C |
-| `/org/[orgId]/documents/[documentId]`: readable chunks, Text and Access | C |
+| `/org/[orgId]/documents/[documentId]`: readable chunks, Text and Access; the president edits who can read | C |
 | `/org/[orgId]/preview` | C |
 | `/org/[orgId]/preview/retrieval`: president-only permission-filtered demo scores | C |
 | `/org/[orgId]/audit` | C |

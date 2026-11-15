@@ -71,7 +71,9 @@ const rows: UsgDocumentRow[] = [
 const detail: UsgDocumentView = {
   orgId: ORG.usg, usedBy: users,
   document: { id: DOCUMENT.usgFundingRules, title: 'USG Funding Department Guidelines', tier: 'public', sourceId: 's2', sourceName: 'USG rulebook',
-    sourceKind: 'rulebook', version: 1, createdAt, bodyMd: guidelines },
+    sourceKind: 'rulebook', version: 1, createdAt, bodyMd: guidelines, allowedPositions: [] },
+  whoCanRead: 'All students',
+  accessEditor: { access: { tier: 'public', allowedPositions: [] }, positions: [{ slug: 'reviewer', name: 'Reviewer' }] },
 };
 
 describe('USG console timestamps', () => {
@@ -288,6 +290,8 @@ describe('/usg/documents/[documentId]', () => {
     expect(page).toContain('USG Funding Department Guidelines All documents Publish new version');
     expect(html).toContain('href="/usg/documents"');
     expect(page).toContain('Source USG rulebook Readable by Public Version v1 Used by Funding pre-check, USG review assistant');
+    expect(page).toContain('Edit access');
+    expect(text(render(createElement(DocumentDetail, { data: { ...detail, accessEditor: null } })))).not.toContain('Edit access');
     expect(page).toContain('USC Undergraduate Student Government Funding Department Guidelines, current as of October 21, 2026.');
     expect(page).toContain('Section 1: Funding Application Timeline');
     expect(page).toContain('Individual organizations may receive a maximum of $8,000 from the USG Funding Department per year.');
