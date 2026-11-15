@@ -147,7 +147,7 @@ db/seed/         ids.ts: fixed seed ids, shared and append-only
 rules/packs/     usg-funding.v1.json                                        B
 tests/           <area>.test.ts, owned by the stream of the module it covers
                  db.ts: app-role helpers; DB suites skip when the DB is down  A
-scripts/         db-reset.ts (owner URL), check.sh                          A
+scripts/         db-reset.ts (owner URL), check.ts                          A
 ```
 
 Until an interface is real, its stub reads fixtures from the owner's `fixtures.ts` built on
