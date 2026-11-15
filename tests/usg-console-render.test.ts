@@ -40,7 +40,7 @@ const v1: UsgVersion = {
   version: 1, purpose: 'Checks a funding request against the USG funding rules before you submit it.', audience: 'positions',
   usableBy: ['treasurer', 'president'], maxTier: 'officers', sourceKinds: ['rulebook', 'finance'], tools: [],
   modelClasses: ['economy', 'standard'], defaultModelClass: 'standard', modelIds: [...MODEL_IDS], defaultModelId: 'claude-sonnet-5-5',
-  systemPrompt: prompt, rulePackSlug: null,
+  systemPrompt: prompt, rulePackSlug: null, citeSources: true, searchKnowledge: true, temperature: 0.3,
   changelog: 'First version.', publishedAt: '2026-11-15T18:00:00.000Z',
 };
 const view = (patch: Partial<UsgTemplateView> = {}): UsgTemplateView => ({
@@ -108,8 +108,8 @@ describe('/usg/templates/[templateId]', () => {
     expect((html.match(/id="metadata-target"/g) ?? [])).toHaveLength(1);
     expect(html).not.toContain('rollout-target');
     expect(html).toContain(`href="/usg/documents/${DOCUMENT.usgFundingRules}"`);
-    expect(page).toContain('Default model Change note Published v1');
-    expect(page).toMatch(/Officers claude-sonnet-5-5 First version\./);
+    expect(page).toContain('Version Description Audience Reads up to Default model Temperature Change note Published v1');
+    expect(page).toMatch(/Officers claude-sonnet-5-5 0\.3 First version\./);
     expect(page).not.toContain('Edit configuration');
     expectProductOnly(page);
     const retired = text(render(createElement(TemplateDetail, { data: view({ template: { ...view().template, status: 'retired' } }) })));
@@ -133,12 +133,14 @@ describe('/usg/templates/[templateId]', () => {
   it('keeps the request body shape, carrying the rule-pack field over, and lists the fields that change', () => {
     const state = { ...initialState({ ...v1, rulePackSlug: 'usg-funding' }), usableBy: ['treasurer'], tools: ['submit_to_queue'], changelog: 'Treasurers file it themselves.' };
     const body = toBody(state);
-    expect(Object.keys(body).sort()).toEqual(['audience', 'changelog', 'defaultModelId', 'maxTier', 'modelIds', 'purpose', 'rulePackSlug', 'sourceKinds', 'systemPrompt', 'tools', 'usableBy']);
+    expect(Object.keys(body).sort()).toEqual(['audience', 'changelog', 'citeSources', 'defaultModelId', 'maxTier', 'modelIds', 'purpose', 'rulePackSlug',
+      'searchKnowledge', 'sourceKinds', 'systemPrompt', 'temperature', 'tools', 'usableBy']);
+    expect(body).toMatchObject({ citeSources: true, searchKnowledge: true, temperature: 0.3 });
     expect(body).toMatchObject({ usableBy: ['treasurer'], tools: ['submit_to_queue'], rulePackSlug: 'usg-funding', modelIds: [...MODEL_IDS], defaultModelId: 'claude-sonnet-5-5' });
     expect(toBody(initialState(v1)).rulePackSlug).toBeNull();
     const ctx = { positions: view().positions };
     const changes = versionChanges(v1, toBody({ ...state, rulePackSlug: '' }), ctx);
-    expect(changes.map(c => c.field)).toEqual(['Positions', 'Tools']);
+    expect(changes.map(c => c.field)).toEqual(['Tools', 'Positions']);
     expect(versionChanges(v1, toBody(initialState(v1)), ctx)).toEqual([]);
     expect(validate({ ...state, audience: 'positions', usableBy: [] }).usableBy).toMatch(/Choose at least one position/);
     expect(toBody({ ...state, audience: 'public', maxTier: 'officers' })).toMatchObject({ audience: 'public', usableBy: [], maxTier: 'public' });
@@ -171,9 +173,23 @@ describe('/usg/templates/[templateId]', () => {
     const page = text(html);
     expect(page).toContain('Version 1 · published Nov 15, 2026, 10:00 AM PT No unpublished changes Review and publish v2');
     expect(page).not.toContain('Discard');
-    for (const choice of ['Details', 'Purpose', 'Instructions', '32 words', 'Knowledge', 'Club finances', 'USG rulebook', 'Reads up to', 'Officers',
-      'Tools', 'Submit to queue', 'Proposes filing the application in USG’s queue; the user confirms.', 'Models', 'Access', 'All students',
+    for (const choice of ['Agent', 'Description', 'Members see it above the chat.', 'System prompt', '32 words', 'Capabilities', 'Search knowledge',
+      'Each run reads the permitted documents from the knowledge sources below.', 'Cite sources', 'Answers link each fact to the document it came from.',
+      'Knowledge', 'Club finances', 'USG rulebook', 'Reads up to', 'Officers',
+      'Tools', 'Submit to queue', 'Proposes filing the application in USG’s queue; the user confirms.', 'Model', 'Access', 'All students',
       'All members', 'Named positions', 'Positions', 'Treasurer', 'Change note']) expect(page).toContain(choice);
+    expect(page).not.toContain('Instructions');
+    expect(page).not.toContain('Purpose');
+    // Sections in the builder's order.
+    const order = ['agent', 'capabilities', 'knowledge', 'tools', 'models', 'access', 'note'].map(id => html.indexOf(`id="builder-${id}-title"`));
+    expect(order.every(i => i > 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(page).not.toContain('Runs read no documents while Search knowledge is off.');
+    // Temperature: a labelled native range from 0 to 1 with its value in mono and both end labels.
+    expect(html).toMatch(/<label[^>]*for="version-temperature"[^>]*>Temperature<\/label>/);
+    expect(html).toMatch(/<input id="version-temperature" type="range" min="0" max="1" step="0.1"[^>]*class="[^"]*accent-primary[^"]*" value="0.3"/);
+    expect(html).toMatch(/<output[^>]*class="[^"]*font-mono[^"]*"[^>]*>0\.3<\/output>/);
+    expect(page).toContain('Precise Creative Lower is more consistent; higher varies wording.');
     // The model checklist, grouped by provider, then the chat default from the same menu chat uses.
     expect(page).toContain('OpenAI gpt-6-luna Economy 1 credit per run gpt-6.1-sol Standard 3 credits per run Anthropic claude-haiku-5-5 Economy 1 credit per run claude-sonnet-5-5 Standard 3 credits per run Google gemini-4-hydrogen Economy 1 credit per run gemini-4-carbon Standard 3 credits per run');
     expect(page).toContain('Default in chat claude-sonnet-5-5 3 credits per run');
@@ -199,6 +215,35 @@ describe('/usg/templates/[templateId]', () => {
     expect(html).toContain('aria-label="Preview model: claude-haiku-5-5"');
     expect(text(html)).not.toContain('What would you like to work on?');
     expectProductOnly(text(html));
+  });
+  it('switches capabilities and sets the temperature, and reviews those changes', () => {
+    const ctx = { positions: view().positions };
+    const state = { ...initialState(v1), searchKnowledge: false, citeSources: false, temperature: 0.5 };
+    const body = toBody(state);
+    expect(body).toMatchObject({ searchKnowledge: false, citeSources: false, temperature: 0.5 });
+    expect(versionChanges(v1, body, ctx)).toEqual([
+      { field: 'Search knowledge', before: 'On', after: 'Off' },
+      { field: 'Cite sources', before: 'On', after: 'Off' },
+      { field: 'Temperature', before: '0.3', after: '0.5' },
+    ]);
+    // A range step of 0.1 that lands on 0.30000000000000004 is still the published 0.3.
+    expect(versionChanges(v1, toBody({ ...initialState(v1), temperature: 0.1 + 0.2 }), ctx)).toEqual([]);
+    expect(validate(state)).toEqual({});
+    expect(validate({ ...state, temperature: 1.5 }).temperature).toBe('Set the temperature between 0 and 1.');
+    expect(validate({ ...state, temperature: -0.1 }).temperature).toBe('Set the temperature between 0 and 1.');
+    expect(initialState(undefined)).toMatchObject({ searchKnowledge: true, citeSources: true, temperature: 0.3 });
+    expect(initialState({ ...v1, citeSources: false, temperature: 0.8 })).toMatchObject({ searchKnowledge: true, citeSources: false, temperature: 0.8 });
+
+    const review = text(render(createElement(VersionReview, { templateName: 'Funding pre-check', nextVersion: 2, currentVersion: 1,
+      changes: versionChanges(v1, body, ctx), reach: versionReach(body, 3, ctx), changelog: '' })));
+    expect(review).toContain('Search knowledge On Off Cite sources On Off Temperature 0.3 0.5');
+    expectProductOnly(review);
+
+    const off = text(render(createElement(VersionEditor, { data: view({ versions: [{ ...v1, searchKnowledge: false, citeSources: false, temperature: 0.8 }] }) })));
+    expect(off).toContain('Runs read no documents while Search knowledge is off.');
+    expect(off).not.toContain('Searches knowledge');
+    expect(off).not.toContain('Cites sources');
+    expect(off).toContain('Temperature 0.8 Precise Creative');
   });
 });
 

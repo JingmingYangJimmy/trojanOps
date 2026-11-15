@@ -25,7 +25,7 @@ export interface UsgTemplateRow {
 export interface UsgTarget { slug: string; name: string; clubs: Array<{ id: string; name: string }> }
 export interface UsgVersion {
   version: number; purpose: string; audience: Audience; usableBy: string[]; maxTier: Tier;
-  sourceKinds: string[]; tools: string[]; modelClasses: ModelClass[]; defaultModelClass: ModelClass; modelIds: ModelId[]; defaultModelId: ModelId;
+  sourceKinds: string[]; tools: string[]; modelClasses: ModelClass[]; defaultModelClass: ModelClass; modelIds: ModelId[]; defaultModelId: ModelId; citeSources: boolean; searchKnowledge: boolean; temperature: number;
   systemPrompt: string; rulePackSlug: string | null; changelog: string; publishedAt: string;
 }
 export interface UsgTemplatesView { templates: UsgTemplateRow[]; targets: UsgTarget[] }
@@ -116,6 +116,7 @@ export async function usgTemplateView(actor: Actor, id: string): Promise<UsgTemp
     version: v.version, purpose: v.purpose, audience: v.audience, usableBy: v.usableBy, maxTier: v.maxTier,
     sourceKinds: v.sourceKinds, tools: v.tools, modelClasses: v.modelClasses, defaultModelClass: v.defaultModelClass,
     modelIds: orderedModelIds(v.modelIds), defaultModelId: isModelId(v.defaultModelId) ? v.defaultModelId : orderedModelIds(v.modelIds)[0] ?? MODEL_IDS[0],
+    citeSources: v.citeSources, searchKnowledge: v.searchKnowledge, temperature: v.temperature,
     systemPrompt: v.systemPrompt, rulePackSlug: v.rulePackSlug, changelog: v.changelog, publishedAt: v.publishedAt.toISOString(),
   })) };
 }

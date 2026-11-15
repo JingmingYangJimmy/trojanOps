@@ -66,6 +66,8 @@ export async function runAgent(actor: Actor, installationId: string, input: stri
     : classOf(resolved.defaultModelId) === requestedClass ? resolved.defaultModelId
     : resolved.allowedModelIds.find((id) => classOf(id) === requestedClass) ?? resolved.defaultModelId;
   const agent = { ...resolved, modelClass: classOf(modelId) };
+  const searchKnowledge = agent.settings?.searchKnowledge ?? true;
+  const citeSources = agent.settings?.citeSources ?? true;
 
   // 3. Grants, capped by max tier
   const runGrants = capGrants(await grantsFor(userId, agent.orgId), agent.orgId, agent.maxTier);
@@ -100,8 +102,8 @@ export async function runAgent(actor: Actor, installationId: string, input: stri
     }));
     done.inserted = true;
 
-    // 5. Accessible documents
-    docs = await listAccessibleDocuments(actor, runGrants, agent);
+    // 5. Accessible documents. With Search knowledge off (decision 30) the run reads none, which only narrows.
+    docs = searchKnowledge ? await listAccessibleDocuments(actor, runGrants, agent) : [];
     await audit('run.access', { ...runEvent, details: { documentIds: docs.map((d) => d.id) } });
 
     // 6. Runtime
@@ -143,7 +145,7 @@ export async function runAgent(actor: Actor, installationId: string, input: stri
   // Only the club's president or a USG admin gets a list. A failure here must not lose a completed run.
   let blocked: RunResult['inspector']['blocked'];
   try {
-    blocked = await listBlockedDocuments(actor, agent, runGrants, docs.map((d) => d.id));
+    blocked = searchKnowledge ? await listBlockedDocuments(actor, agent, runGrants, docs.map((d) => d.id)) : undefined;
   } catch {
     blocked = undefined;
   }
@@ -157,7 +159,8 @@ export async function runAgent(actor: Actor, installationId: string, input: stri
       runGrants: await grantLabels(runGrants),
       sources: await sourceNames(agent.sourceIds),
       permitted: docs.map(({ id, title, tier, version }) => ({ id, title, tier, version })),
-      readInRun: docs.filter((d) => cited.includes(d.id)).map(({ id, title }) => ({ id, title })),
+      // Cited documents; with Cite sources off (decision 30) every document the runtime was given.
+      readInRun: docs.filter((d) => !citeSources || cited.includes(d.id)).map(({ id, title }) => ({ id, title })),
       ...(blocked !== undefined && { blocked }),
       templateVersion: agent.templateVersion,
       rulePack: agent.rulePack ? { label: agent.rulePack.label, version: agent.rulePack.version } : undefined,

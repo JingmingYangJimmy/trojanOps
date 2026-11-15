@@ -22,6 +22,9 @@ export interface ComposeInput {
     defaultModelClass: ModelClass;
     modelIds: string[];
     defaultModelId: string;
+    citeSources: boolean;
+    searchKnowledge: boolean;
+    temperature: number;
     systemPrompt: string;
   };
   installation: {
@@ -114,6 +117,7 @@ export function composeEffectiveAgent(input: ComposeInput): ResolvedAgent {
     fixedByClub: installation.modelClass !== null,
     // USG would allow a model in this club that the template does not offer.
     limitedByTemplate: DEMO_MODELS.some((m) => club.policy.allowedModelClasses.includes(m.modelClass) && !offered.includes(m.id)),
+    settings: { citeSources: version.citeSources, searchKnowledge: version.searchKnowledge, temperature: version.temperature },
     systemPrompt: installation.promptAddendum
       ? `${version.systemPrompt}\n\n${installation.promptAddendum}`
       : version.systemPrompt,

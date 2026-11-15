@@ -130,6 +130,8 @@ export async function seedDistribution(db: SeedDb): Promise<void> {
       sourceKinds: ['rulebook', 'finance'],
       tools: ['submit_to_queue'],
       ...modelFields(['gpt-6-luna', 'gpt-6.1-sol', 'claude-haiku-5-5', 'claude-sonnet-5-5', 'gemini-4-hydrogen', 'gemini-4-carbon'], 'claude-sonnet-5-5'),
+      // Rule checks should read the same way every time.
+      temperature: 0.1,
       systemPrompt: ['You are Funding pre-check, a USG agent for club treasurers and presidents.',
         'Before the club submits a funding application on EngageSC, check the draft against the USG Funding Department Guidelines in the USG rulebook.',
         'For each budget line and date: say whether it passes, fails or needs a reviewer, cite the rule by section (for example "§5 Food per person"), and when it fails say exactly what to change.',

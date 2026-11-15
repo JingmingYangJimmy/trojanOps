@@ -5,7 +5,7 @@
 // published version and reviews it, with who it reaches, before POST /api/templates/:id/versions
 // (version-draft.ts holds the body, validation and change list).
 import { useId, useState, type FormEvent, type ReactNode } from 'react';
-import { Check, CircleAlert, CircleDot } from 'lucide-react';
+import { Check, CircleAlert, CircleDot, CircleSlash } from 'lucide-react';
 import { ModelPicker } from '@/components/inspector/model-picker';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,8 @@ import {
 } from '../template-config';
 import { TemplatePreview } from './template-preview';
 import {
-  initialState, reachSentences, toBody, validate, versionChanges, words, type EditorField, type EditorState, type FieldChange,
+  initialState, reachSentences, roundTemperature, temperatureLabel, toBody, validate, versionChanges, words,
+  type EditorField, type EditorState, type FieldChange,
 } from './version-draft';
 
 export interface VersionReviewProps { templateName: string; nextVersion: number; currentVersion: number | null; changes: FieldChange[]; reach: string[]; changelog: string }
@@ -39,7 +40,7 @@ export function VersionReview({ templateName, nextVersion, currentVersion, chang
         <TableHeader><TableRow className="hover:bg-transparent"><TableHead>Setting</TableHead><TableHead>{currentVersion ? `Now (v${currentVersion})` : 'Now'}</TableHead><TableHead>After (v{nextVersion})</TableHead></TableRow></TableHeader>
         <TableBody>{changes.map(c => <TableRow key={c.field} className="align-top hover:bg-transparent">
           <TableCell className="font-semibold">{c.field}</TableCell><TableCell className="text-muted-foreground">{c.before}</TableCell>
-          <TableCell>{c.after}{c.detail && <details className="mt-1"><summary className="cursor-pointer text-xs text-primary">Show new instructions</summary>
+          <TableCell>{c.after}{c.detail && <details className="mt-1"><summary className="cursor-pointer text-xs text-primary">Show new system prompt</summary>
             <p className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-muted p-2 text-xs leading-4">{c.detail}</p></details>}</TableCell>
         </TableRow>)}</TableBody>
       </Table></div>
@@ -76,8 +77,13 @@ const toggle = (values: string[], value: string, on: boolean) => on ? [...values
 /** The first control of the first invalid field, in the form's order. */
 const FIELD_TARGETS: ReadonlyArray<[EditorField, string]> = [
   ['purpose', 'version-purpose'], ['systemPrompt', 'version-prompt'], ['sourceKinds', 'builder-knowledge-title'],
-  ['modelIds', 'builder-models-title'], ['usableBy', 'builder-access-title'],
+  ['modelIds', 'builder-models-title'], ['temperature', 'version-temperature'], ['usableBy', 'builder-access-title'],
 ];
+/** The switches that shape every run, shown as rows like the tools. */
+const CAPABILITIES = [
+  { key: 'searchKnowledge', name: 'Search knowledge', description: 'Each run reads the permitted documents from the knowledge sources below.' },
+  { key: 'citeSources', name: 'Cite sources', description: 'Answers link each fact to the document it came from.' },
+] as const;
 
 export function VersionEditor({ data }: { data: UsgTemplateView }) {
   const { template } = data; const retired = template.status === 'retired';
@@ -149,24 +155,31 @@ export function VersionEditor({ data }: { data: UsgTemplateView }) {
     <div className="grid gap-8 lg:grid-cols-[minmax(0,640px)_1fr] lg:items-start">
       <form id={formId} onSubmit={review} noValidate aria-label={`Configure version ${next}`}>
         <fieldset disabled={retired} className="min-w-0 space-y-6">
-          <BuilderSection id="builder-details" title="Details">
-            <div><Label htmlFor="version-purpose">Purpose</Label>
+          <BuilderSection id="builder-agent" title="Agent">
+            <div><Label htmlFor="version-purpose">Description</Label>
               <Input id="version-purpose" value={state.purpose} onChange={e => set('purpose', e.target.value)} aria-invalid={!!errors.purpose}
                 aria-describedby={errors.purpose ? 'version-purpose-error' : 'version-purpose-hint'} />
-              <p id="version-purpose-hint" className="mt-1 text-xs leading-4 text-muted-foreground">One sentence. Members see it above the chat.</p>
+              <p id="version-purpose-hint" className="mt-1 text-xs leading-4 text-muted-foreground">Members see it above the chat.</p>
               <FieldError id="version-purpose-error" message={errors.purpose} /></div>
-          </BuilderSection>
-
-          <BuilderSection id="builder-instructions" title={<label htmlFor="version-prompt">Instructions</label>} hint="What the agent follows before every request.">
-            <div><Textarea id="version-prompt" value={state.systemPrompt} onChange={e => set('systemPrompt', e.target.value)} rows={14} className="text-base leading-6"
-              aria-invalid={!!errors.systemPrompt} aria-describedby={`version-prompt-count${errors.systemPrompt ? ' version-prompt-error' : ''}`} />
+            <div><Label htmlFor="version-prompt">System prompt</Label>
+              <p id="version-prompt-hint" className="mb-1 text-xs leading-4 text-muted-foreground">What the agent follows before every request.</p>
+              <Textarea id="version-prompt" value={state.systemPrompt} onChange={e => set('systemPrompt', e.target.value)} rows={14} className="text-base leading-6"
+                aria-invalid={!!errors.systemPrompt} aria-describedby={`version-prompt-hint version-prompt-count${errors.systemPrompt ? ' version-prompt-error' : ''}`} />
               <div className="mt-1 flex items-start justify-between gap-4">
                 <FieldError id="version-prompt-error" message={errors.systemPrompt} />
                 <p id="version-prompt-count" className="ml-auto text-xs leading-4 tabular-nums text-muted-foreground">{words(state.systemPrompt)}</p>
               </div></div>
           </BuilderSection>
 
+          <BuilderSection id="builder-capabilities" title="Capabilities">
+            <div className={LIST}>
+              {CAPABILITIES.map(c => <OptionRow key={c.key} title={c.name} description={c.description} descriptionId={`capability-${c.key}-hint`}
+                control={<Switch checked={state[c.key]} aria-describedby={`capability-${c.key}-hint`} onCheckedChange={on => set(c.key, on)} />} />)}
+            </div>
+          </BuilderSection>
+
           <BuilderSection id="builder-knowledge" title="Knowledge" hint="Each club supplies its own documents; USG supplies its library. Permissions apply on every run.">
+            {!state.searchKnowledge && <p className="flex items-center gap-1 text-sm text-muted-foreground"><CircleSlash aria-hidden="true" className="size-4 shrink-0" />Runs read no documents while Search knowledge is off.</p>}
             <div role="group" aria-label="Knowledge sources" className={LIST}>
               {sourceOptions.map(s => <OptionRow key={s.slug} title={s.name} description={s.description} descriptionId={`source-${s.slug}-hint`} aside={scopeLabel(s.owner)}
                 control={<Checkbox aria-describedby={`source-${s.slug}-hint`} checked={state.sourceKinds.includes(s.slug)} onChange={e => set('sourceKinds', toggle(state.sourceKinds, s.slug, e.target.checked))} />} />)}
@@ -191,7 +204,7 @@ export function VersionEditor({ data }: { data: UsgTemplateView }) {
             </div>
           </BuilderSection>
 
-          <BuilderSection id="builder-models" title="Models" hint="Members choose from these in chat. Each run is paid from the club’s budget at the model’s price.">
+          <BuilderSection id="builder-models" title="Model" hint="Members choose from these in chat. Each run is paid from the club’s budget at the model’s price.">
             <div role="group" aria-label="Models offered" className={LIST}>
               {MODELS_BY_PROVIDER.map(group => <div key={group.provider} role="group" aria-labelledby={`provider-${group.provider}`}>
                 <p id={`provider-${group.provider}`} className="bg-muted px-3 py-1 text-xs font-semibold leading-5 text-muted-foreground">{group.provider}</p>
@@ -211,6 +224,19 @@ export function VersionEditor({ data }: { data: UsgTemplateView }) {
                   className="h-9 border border-input px-3 text-sm" />
                 <span className="text-sm tabular-nums text-muted-foreground">{modelPrice(state.defaultModelId)}</span>
               </> : <span className="text-sm text-muted-foreground">Choose a model above first.</span>}
+            </div>
+            <div className="max-w-md space-y-1 pt-2">
+              <Label htmlFor="version-temperature">Temperature</Label>
+              <div className="grid grid-cols-[minmax(0,1fr)_2.5rem] items-center gap-x-3">
+                <input id="version-temperature" type="range" min={0} max={1} step={0.1} value={state.temperature}
+                  onChange={e => set('temperature', roundTemperature(Number(e.target.value)))} aria-invalid={!!errors.temperature}
+                  aria-describedby={`version-temperature-ends version-temperature-hint${errors.temperature ? ' version-temperature-error' : ''}`}
+                  className="h-6 w-full cursor-pointer accent-primary disabled:cursor-not-allowed disabled:opacity-50" />
+                <output htmlFor="version-temperature" className="text-right font-mono text-sm tabular-nums">{temperatureLabel(state.temperature)}</output>
+                <p id="version-temperature-ends" className="flex justify-between text-xs leading-4 text-muted-foreground"><span>Precise</span><span>Creative</span></p>
+              </div>
+              <p id="version-temperature-hint" className="text-xs leading-4 text-muted-foreground">Lower is more consistent; higher varies wording.</p>
+              <FieldError id="version-temperature-error" message={errors.temperature} />
             </div>
           </BuilderSection>
 

@@ -259,6 +259,9 @@ describe('composeEffectiveAgent · version ⊗ installation', () => {
       version: 2,
       purpose: 'Checks a request.',
       ...baseVersion,
+      citeSources: true,
+      searchKnowledge: true,
+      temperature: 0.1,
       systemPrompt: 'You check requests.',
     },
     installation: {
@@ -292,6 +295,7 @@ describe('composeEffectiveAgent · version ⊗ installation', () => {
       systemPrompt: 'You check requests.',
     });
     expect(agent).not.toHaveProperty('rulePack');
+    expect(agent.settings).toEqual({ citeSources: true, searchKnowledge: true, temperature: 0.1 });
   });
 
   it('offers the template models the club allows, defaulting to the template default (decision 29)', () => {

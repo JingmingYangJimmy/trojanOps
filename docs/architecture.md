@@ -183,7 +183,7 @@ Every id is `uuid default gen_random_uuid()`; every table has `created_at` writt
 ### Distribution (B)
 
 - `agent_templates(id, slug text unique, name text, publisher_org_id, scope text check (scope in ('global','org')), distribution text check (distribution in ('required','default','optional')), target text default 'all', status text check (status in ('active','retired')), latest_version int, distributed_at timestamptz null)`
-- `agent_template_versions(id, template_id, version int, purpose text, audience text check (audience in ('public','members','positions')), usable_by text[], max_tier text, source_kinds text[], tools text[], model_classes text[], default_model_class text, model_ids text[], default_model_id text check (default_model_id = any(model_ids)), system_prompt text, rule_pack_slug text null, changelog text, published_by, published_at, unique (template_id, version))`
+- `agent_template_versions(id, template_id, version int, purpose text, audience text check (audience in ('public','members','positions')), usable_by text[], max_tier text, source_kinds text[], tools text[], model_classes text[], default_model_class text, model_ids text[], default_model_id text check (default_model_id = any(model_ids)), cite_sources bool default true, search_knowledge bool default true, temperature real default 0.3 check (temperature between 0 and 1), system_prompt text, rule_pack_slug text null, changelog text, published_by, published_at, unique (template_id, version))`
 - `agent_installations(id, template_id, org_id, enabled bool, track text check (track in ('latest','pinned')), pinned_version int null (required when track = 'pinned'), audience text null, usable_by text[] null, prompt_addendum text, extra_source_ids uuid[], model_class text null, installed_by, installed_at, unique (template_id, org_id))`
 - `rule_packs(id, slug text, version int, status text check (status in ('draft','published')), label text, content jsonb, published_by, published_at, unique (slug, version))`
 - `usg_club_policy(org_id primary key, allowed_model_classes text[], allow_public_agents bool default true)`
@@ -310,6 +310,7 @@ export interface EffectiveAgent {
   modelClass: ModelClass;
   systemPrompt: string;
   rulePack?: { slug: string; version: number; label: string; content: unknown };
+  settings?: { citeSources: boolean; searchKnowledge: boolean; temperature: number };  // decision 30; absent = defaults
 }
 
 // distribution: positions are read in agent.orgId, not in the actor's active org.
@@ -510,13 +511,15 @@ export interface LLMProvider {              // used by the real runtime (WP-13)
    `student_daily`, for every public-agent run. Blocked → `quota.blocked`, 429 `quota_exceeded` with
    `cap`; runtime not called.
 5. `accessibleDocuments = listAccessibleDocuments(actor, runGrants, agent)` (C, via
-   `withActor`); `audit('run.access', {documentIds})`.
+   `withActor`); `audit('run.access', {documentIds})`. When the version has Search knowledge off
+   (`agent.settings.searchKnowledge = false`, decision 30) the run reads no documents.
 6. `runtime.run(agent, actor, input, {runId, accessibleDocuments})`.
 7. `proposedActions`: write tools become `pending_actions`, confirmed on the run page; read and
    draft tools run through `gateway.tool()` once real agents exist.
 8. Settle quota with the actual cost, update `agent_runs`, `audit('agent.run', {runId, costMicro})`,
    return `RunResult`. `inspector.blocked` is filled only when the viewer is the club's president
-   or a USG admin, with titles resolved under the viewer's own RLS.
+   or a USG admin, with titles resolved under the viewer's own RLS, and never when Search knowledge
+   is off. With Cite sources off, `inspector.readInRun` lists every document the run read.
 
 Mock runtime (`runtime/mock.ts`):
 - The reply is safe Markdown with numbered citations and an explicit placeholder label.
@@ -524,6 +527,9 @@ Mock runtime (`runtime/mock.ts`):
 - A document above version 1 is named with its version, e.g. "USG Funding Department Guidelines (v2)".
 - With a rule pack, the reply adds "<label> v<version> · annual cap $<value>". No seeded template attaches one (decision 26).
 - Cost follows `gateway/prices.ts`: Economy 1 credit, Standard 3 credits. No model call.
+- Decision 30: with Search knowledge off the reply says the agent answers without reading club
+  documents; with Cite sources off it returns no citations and no `[n]` markers. Temperature is
+  ignored.
 - If `submit_to_queue` is enabled and the input asks to submit, propose it as a pending write;
   the run's Treasurer or President must confirm. Confirmation records a decision, not execution.
 - Handoff agents (`hacksc-handoff`, `handoff`, or readable records with a "Previous event process"
@@ -629,7 +635,8 @@ Seeded templates (display names in UI copy):
   3. `not_granted` when no grant matches;
   4. `allowed` otherwise.
   - A test asserts it agrees with `listAccessibleDocuments` for every persona × agent × document
-    in the seed.
+    in the seed. The permission preview, knowledge matrix and retrieval test explain what a grant
+    set may read; a version with Search knowledge off reads nothing at run time (decision 30).
 - **`listBlockedDocuments(viewer, agent, runGrants, accessibleIds)`** (`documents/access.ts`) fills
   `RunInspector.blocked` in the gateway's step 8. It returns `undefined` unless the viewer is the
   president of `agent.orgId` (recomputed with `grantsFor`) or a USG admin.

@@ -19,6 +19,7 @@ import {
 import { audienceLabel, TIERS } from '../template-config';
 import { VersionEditor } from './version-editor';
 import { TemplateKnowledge } from './template-knowledge';
+import { temperatureLabel } from './version-draft';
 const features = tableFeatures({}); const column = createColumnHelper<typeof features, UsgVersion>();
 const audience = (version: UsgVersion) => audienceLabel(version.audience, version.usableBy);
 type Mutation = ReturnType<typeof useConsoleMutation>;
@@ -39,9 +40,10 @@ export function TemplateDetail({ data }: { data: UsgTemplateView }) {
     : unsaved ? 'Save the settings on the Distribution tab before distributing this template.' : null;
   const columns = column.columns([
     column.accessor('version', { header: 'Version', cell: ({ getValue }) => `v${getValue()}` }),
-    column.accessor('purpose', { header: 'Purpose' }), column.display({ id: 'audience', header: 'Audience', cell: ({ row }) => audience(row.original) }),
+    column.accessor('purpose', { header: 'Description' }), column.display({ id: 'audience', header: 'Audience', cell: ({ row }) => audience(row.original) }),
     column.accessor('maxTier', { header: 'Reads up to', cell: ({ getValue }) => TIERS[getValue()].name }),
     column.accessor('defaultModelId', { header: 'Default model' }),
+    column.accessor('temperature', { header: 'Temperature', cell: ({ getValue }) => temperatureLabel(getValue()) }),
     column.accessor('changelog', { header: 'Change note', cell: ({ getValue }) => getValue() || 'No change note' }),
     column.accessor('publishedAt', { header: 'Published', cell: ({ getValue }) => absoluteTime(getValue()) }),
   ]);
@@ -108,7 +110,7 @@ export function TemplateDetail({ data }: { data: UsgTemplateView }) {
         </Section>
       </Tabs.Content>
       <Tabs.Content value="versions" forceMount className="data-[state=inactive]:hidden">
-        <Section title="Version history"><DataTable table={table} caption={`Published versions of ${template.name}`} numericColumns={['version']} monoColumns={['publishedAt', 'defaultModelId']} rowHeaderColumn="version" sorted={{ id: 'version', direction: 'desc' }} minWidth={1024} empty="No versions published yet. Publish the first version on the Configure tab." />
+        <Section title="Version history"><DataTable table={table} caption={`Published versions of ${template.name}`} numericColumns={['version']} monoColumns={['publishedAt', 'defaultModelId', 'temperature']} rowHeaderColumn="version" sorted={{ id: 'version', direction: 'desc' }} minWidth={1024} empty="No versions published yet. Publish the first version on the Configure tab." />
           {data.versions.length > 10 && <div className="flex items-center justify-end gap-3"><span>Page {page} of {Math.ceil(data.versions.length / 10)}</span><Button type="button" variant="secondary" disabled={page === 1} onClick={() => setPage(page - 1)}>Previous</Button><Button type="button" variant="secondary" disabled={page * 10 >= data.versions.length} onClick={() => setPage(page + 1)}>Next</Button></div>}
         </Section>
       </Tabs.Content>

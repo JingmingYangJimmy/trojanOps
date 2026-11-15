@@ -30,7 +30,12 @@ export interface EffectiveAgent {
   modelClass: ModelClass;
   systemPrompt: string;
   rulePack?: { slug: string; version: number; label: string; content: unknown };
+  /** The version's capabilities and sampling (decision 30); absent means the defaults
+   * (cite and search on, temperature 0.3). Search off: the run reads no documents. */
+  settings?: AgentSettings;
 }
+export interface AgentSettings { citeSources: boolean; searchKnowledge: boolean; temperature: number }
+export const DEFAULT_AGENT_SETTINGS: AgentSettings = { citeSources: true, searchKnowledge: true, temperature: 0.3 };
 
 // distribution: positions are read in agent.orgId, not in the actor's active org.
 // Implemented in src/lib/distribution/effective-config.ts.

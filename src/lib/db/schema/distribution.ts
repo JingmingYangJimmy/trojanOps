@@ -1,6 +1,6 @@
 // Owner: B. Spec: docs/architecture.md §5 "Distribution" and §8.
 import { sql } from 'drizzle-orm';
-import { boolean, check, integer, jsonb, pgTable, text, unique, uuid } from 'drizzle-orm/pg-core';
+import { boolean, check, integer, jsonb, pgTable, real, text, unique, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, id, ts } from './columns';
 import { orgs, users } from './orgs';
 import type { Audience, ModelClass, Tier } from '../../contracts';
@@ -38,6 +38,10 @@ export const agentTemplateVersions = pgTable('agent_template_versions', {
   // The specific demo models offered in chat; the class columns above are derived from them (decision 29).
   modelIds: text('model_ids').array().notNull(),
   defaultModelId: text('default_model_id').notNull(),
+  // Capabilities and sampling (decision 30). Search off: runs read no documents. Temperature waits for WP-13.
+  citeSources: boolean('cite_sources').notNull().default(true),
+  searchKnowledge: boolean('search_knowledge').notNull().default(true),
+  temperature: real('temperature').notNull().default(0.3),
   systemPrompt: text('system_prompt').notNull(),
   rulePackSlug: text('rule_pack_slug'),
   changelog: text('changelog').notNull().default(''),
@@ -50,6 +54,7 @@ export const agentTemplateVersions = pgTable('agent_template_versions', {
   check('agent_template_versions_max_tier_check', sql`${t.maxTier} in ('public', 'members', 'officers', 'usg_internal')`),
   check('agent_template_versions_default_model_class_check', sql`${t.defaultModelClass} in ('standard', 'economy')`),
   check('agent_template_versions_default_model_id_check', sql`${t.defaultModelId} = any(${t.modelIds})`),
+  check('agent_template_versions_temperature_check', sql`${t.temperature} between 0 and 1`),
 ]);
 
 // Null override columns mean "use the template version's value".

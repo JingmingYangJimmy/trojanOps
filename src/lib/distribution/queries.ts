@@ -165,6 +165,9 @@ async function loadComposeInputs(filter: AgentFilter): Promise<LoadedInput[]> {
       defaultModelClass: agentTemplateVersions.defaultModelClass,
       modelIds: agentTemplateVersions.modelIds,
       defaultModelId: agentTemplateVersions.defaultModelId,
+      citeSources: agentTemplateVersions.citeSources,
+      searchKnowledge: agentTemplateVersions.searchKnowledge,
+      temperature: agentTemplateVersions.temperature,
       systemPrompt: agentTemplateVersions.systemPrompt,
       rulePackSlug: agentTemplateVersions.rulePackSlug,
     })
@@ -213,6 +216,9 @@ async function loadComposeInputs(filter: AgentFilter): Promise<LoadedInput[]> {
           defaultModelClass: r.defaultModelClass!,
           modelIds: r.modelIds!,
           defaultModelId: r.defaultModelId!,
+          citeSources: r.citeSources!,
+          searchKnowledge: r.searchKnowledge!,
+          temperature: r.temperature!,
           systemPrompt: r.systemPrompt!,
         },
         installation: {

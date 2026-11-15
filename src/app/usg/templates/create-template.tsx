@@ -23,9 +23,9 @@ export function CreateTemplate({ targets }: { readonly targets: readonly UsgTarg
         <ErrorNotice message={state.error} />
         <div><label htmlFor="new-template-name" className="mb-1 block font-semibold">Name</label>
           <Input id="new-template-name" name="name" maxLength={120} required placeholder="Meeting summary" /></div>
-        <div><label htmlFor="new-template-purpose" className="mb-1 block font-semibold">Purpose</label>
+        <div><label htmlFor="new-template-purpose" className="mb-1 block font-semibold">Description</label>
           <Input id="new-template-purpose" name="purpose" required placeholder="Summarizes decisions, owners and next steps from club meetings." /></div>
-        <div><label htmlFor="new-template-instructions" className="mb-1 block font-semibold">Instructions</label>
+        <div><label htmlFor="new-template-instructions" className="mb-1 block font-semibold">System prompt</label>
           <Textarea id="new-template-instructions" name="systemPrompt" rows={4} required
             defaultValue="Summarize decisions, owners and next steps from the club documents provided. Cite the document behind each fact. If information is missing, say so and do not guess." /></div>
         <fieldset><legend className="mb-2 font-semibold">Document sources</legend>

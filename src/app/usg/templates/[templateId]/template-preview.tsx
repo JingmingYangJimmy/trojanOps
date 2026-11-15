@@ -52,7 +52,7 @@ export function TemplatePreview({ name, slug, versionLabel, purpose, modelIds, d
               <span>{starter}</span><ArrowUpRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
             </li>)}
           </ul>
-        </div> : <p className="mx-auto max-w-md text-center text-base leading-6 text-muted-foreground">{purpose || 'Add a purpose to show it here.'}</p>}
+        </div> : <p className="mx-auto max-w-md text-center text-base leading-6 text-muted-foreground">{purpose || 'Add a description to show it here.'}</p>}
       </div>
 
       <div className="px-4 pb-4">

@@ -79,7 +79,9 @@ export function AnswerTurn(p: AnswerTurnProps) {
   const sources = citedSources(p.result);
   const tiers: Tier[] = ['public', 'members', 'officers', 'usg_internal'];
   const cited = p.result.inspector.permitted.filter((d) => sources.some((s) => s.documentId === d.id));
-  const highest = cited.reduce<Tier>((tier, d) => tiers.indexOf(d.tier) > tiers.indexOf(tier) ? d.tier : tier, 'public');
+  // An answer without citations still used what the run read (Cite sources off, decision 30).
+  const used = p.result.inspector.permitted.filter((d) => cited.includes(d) || p.result.inspector.readInRun.some((r) => r.id === d.id));
+  const highest = used.reduce<Tier>((tier, d) => tiers.indexOf(d.tier) > tiers.indexOf(tier) ? d.tier : tier, 'public');
   const shown = full || (!p.playing && !p.stopped) ? p.result.reply : closeBold(words.slice(0, wordCount).join(''));
   const citation = (n: number, compact = false) => {
     const original = p.result.citations[n - 1];

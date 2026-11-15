@@ -141,6 +141,17 @@ describe.skipIf(!probe)('distribution writes', () => {
     await expect(publishVersion(await avery(), TEMPLATE.eventPlanning, draft)).rejects.toMatchObject({ error: { code: 'invalid' } });
     await expect(retire(await sam(), TEMPLATE.handoff)).rejects.toMatchObject({ error: { code: 'forbidden' } });
   }));
+  it('stores capabilities and temperature, with defaults when omitted (decision 30)', () => inRolledBackApp(async tx => {
+    await publishVersion(await avery(), TEMPLATE.eventPlanning, draft);
+    await publishVersion(await avery(), TEMPLATE.eventPlanning, { ...draft, citeSources: false, searchKnowledge: false, temperature: 0.7 });
+    const rows = await tx.execute<{ version: number; cite_sources: boolean; search_knowledge: boolean; temperature: number }>(
+      sql`select version, cite_sources, search_knowledge, temperature from agent_template_versions where template_id = ${TEMPLATE.eventPlanning} and version > 1 order by version`);
+    expect(rows.map((r) => ({ ...r }))).toEqual([
+      { version: 2, cite_sources: true, search_knowledge: true, temperature: 0.3 },
+      { version: 3, cite_sources: false, search_knowledge: false, temperature: 0.7 },
+    ]);
+    await expect(publishVersion(await avery(), TEMPLATE.eventPlanning, { ...draft, temperature: 1.5 })).rejects.toMatchObject({ error: { code: 'invalid' } });
+  }));
   it('allows publication when an inactive club retains its disabled installation', () => inRolledBackApp(async tx => {
     await distribute(await avery(), TEMPLATE.eventPlanning);
     await tx.execute(sql`update orgs set status = 'inactive' where id = ${ORG.archery}`);

@@ -24,7 +24,7 @@ import * as limitsRoute from '@/app/api/quota/limits/route';
 import * as confirmRoute from '@/app/api/pending-actions/[id]/confirm/route';
 import * as rejectRoute from '@/app/api/pending-actions/[id]/reject/route';
 import * as meRoute from '@/app/api/me/route';
-import { DOCUMENT, INSTALLATION, ORG, USER } from '@db/seed/ids';
+import { DOCUMENT, INSTALLATION, ORG, TEMPLATE, USER } from '@db/seed/ids';
 import { actorFor, appSql, closeAppDb, inRolledBackApp } from './db';
 
 // Passthrough, so one case can give an agent a tool list (every fixture agent has tools: []).
@@ -96,6 +96,37 @@ describe.skipIf(!probe)('runAgent', () => {
     expect(run.inspector.readInRun.map((d) => d.id).sort()).toEqual(run.citations.map((c) => c.documentId).sort());
     expect(run.pendingActions).toEqual([]);
     expect(runtime).toHaveBeenCalledOnce();
+  }));
+
+  it('answers without citations when the version has Cite sources off (decision 30)', () => scenario(async (tx) => {
+    const taylor = await actorFor(USER.taylor, ORG.startup);
+    await tx.execute(sql`update agent_template_versions set cite_sources = false where template_id = ${TEMPLATE.fundingPrecheck}`);
+    const run = await runAgent(taylor, INSTALLATION.startupFundingPrecheck, 'Can we fund pitch night?');
+    expect(run.inspector.permitted.length).toBeGreaterThan(0);
+    expect(run.citations).toEqual([]);
+    expect(run.reply).not.toMatch(/\[\d+\]/);
+    // Nothing is cited, but the run still used what it read.
+    expect(run.inspector.readInRun.map((d) => d.id).sort()).toEqual(run.inspector.permitted.map((d) => d.id).sort());
+  }));
+
+  it('reads no documents when the version has Search knowledge off (decision 30)', () => scenario(async (tx) => {
+    const taylor = await actorFor(USER.taylor, ORG.startup);
+    await tx.execute(sql`update agent_template_versions set search_knowledge = false where template_id = ${TEMPLATE.fundingPrecheck}`);
+    const run = await runAgent(taylor, INSTALLATION.startupFundingPrecheck, 'Can we fund pitch night?');
+    expect(run.inspector.permitted).toEqual([]);
+    expect(run.citations).toEqual([]);
+    const [row] = await withActor(taylor, {}, (t) => t.select().from(agentRuns).where(eq(agentRuns.id, run.runId)));
+    expect(row.accessibleDocumentIds).toEqual([]);
+    expect(run.reply).toContain('This agent answers without reading club documents.');
+  }));
+
+  it('lists no blocked documents for a manager when Search knowledge is off (decision 30)', () => scenario(async (tx) => {
+    const sam = await actorFor(USER.sam, ORG.startup);
+    const before = await runAgent(sam, INSTALLATION.startupFundingPrecheck, 'Can we fund pitch night?');
+    expect(before.inspector.blocked).toBeDefined();
+    await tx.execute(sql`update agent_template_versions set search_knowledge = false where template_id = ${TEMPLATE.fundingPrecheck}`);
+    const after = await runAgent(sam, INSTALLATION.startupFundingPrecheck, 'Can we fund pitch night?');
+    expect(after.inspector.blocked).toBeUndefined();
   }));
 
   it('records the run in agent_runs, readable only by its user (I15)', () => scenario(async (tx) => {

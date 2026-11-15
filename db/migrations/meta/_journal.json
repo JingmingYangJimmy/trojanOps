@@ -43,6 +43,13 @@
       "when": 1794754341768,
       "tag": "0005_template_model_ids",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794757398174,
+      "tag": "0006_template_capabilities",
+      "breakpoints": true
     }
   ]
 }

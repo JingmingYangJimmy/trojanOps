@@ -22,7 +22,7 @@ export function TemplatesGrid({ data }: { data: UsgTemplatesView }) {
   const filter = (value: string) => { setQuery(value); setPage(1); };
 
   return <div className="space-y-4">
-    <SearchBar value={query} onChange={filter} count={found.length} placeholder="Search by name or purpose" />
+    <SearchBar value={query} onChange={filter} count={found.length} placeholder="Search by name or description" />
     {!data.templates.length ? <div className="rounded-md border border-border p-6">
       <h2 className="font-semibold">No templates yet</h2>
       <p className="mt-1 text-muted-foreground">Create a template to publish its first version, then distribute it to clubs.</p>

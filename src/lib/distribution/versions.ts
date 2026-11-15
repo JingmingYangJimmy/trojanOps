@@ -14,6 +14,8 @@ export const versionDraftSchema = z.object({
   sourceKinds: z.array(z.enum(['public', 'minutes', 'finance', 'archive', 'rulebook', 'usg_internal'])), tools: z.array(z.string().min(1)),
   modelIds: z.array(z.enum(MODEL_IDS, { message: 'Choose models from the list.' })).min(1, 'Offer at least one model.'),
   defaultModelId: z.enum(MODEL_IDS, { message: 'Choose models from the list.' }),
+  citeSources: z.boolean().default(true), searchKnowledge: z.boolean().default(true),
+  temperature: z.number({ message: 'Set the temperature between 0 and 1.' }).min(0, 'Set the temperature between 0 and 1.').max(1, 'Set the temperature between 0 and 1.').default(0.3),
   systemPrompt: z.string().min(1), rulePackSlug: z.string().min(1).nullable().optional(), changelog: z.string().default(''),
 }).strict().superRefine((v, ctx) => {
   if (!v.modelIds.includes(v.defaultModelId)) ctx.addIssue({ code: 'custom', message: 'The default model must be one of the offered models.' });
