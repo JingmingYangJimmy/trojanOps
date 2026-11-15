@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { fieldClass } from '@/components/inspector/field';
 import type { Tier } from '@/lib/contracts';
 import type { LibraryPageData } from '@/lib/documents/library-page';
-import { tierOptions } from '@/lib/documents/library-view';
+import { AccessFields, checkedPositions } from '@/components/inspector/access-fields';
 import { reviewDocumentUpload, type ReviewReceipt } from '@/lib/documents/knowledge-actions';
 import type { UploadDocumentInput } from '@/lib/documents/library';
 import { uploadErrorMessage } from '@/lib/documents/upload-error';
@@ -31,7 +31,7 @@ export function UploadForm({ data }: { readonly data: LibraryPageData }) {
     const fields = new FormData(event.currentTarget);
     const value = (name: string) => { const entry = fields.get(name); return typeof entry === 'string' ? entry : ''; };
     const draft: UploadDocumentInput = { title: value('title'), sourceId: value('sourceId'), tier,
-      allowedPositions: tier === 'officers' ? fields.getAll('allowedPositions').filter((p): p is string => typeof p === 'string') : [], bodyMd: value('bodyMd') };
+      allowedPositions: checkedPositions(event.currentTarget, tier), bodyMd: value('bodyMd') };
     submitting.current = true;
     setError(null);
     startTransition(async () => {
@@ -70,9 +70,7 @@ export function UploadForm({ data }: { readonly data: LibraryPageData }) {
       {!review ? <form onSubmit={details} className="space-y-4" aria-busy={pending}>
         <label className="block space-y-1"><span className="font-semibold">Title</span><input name="title" defaultValue={previous?.title} required maxLength={200} readOnly={pending} className={fieldClass} /></label>
         <label className="block space-y-1"><span className="font-semibold">Source</span><select name="sourceId" defaultValue={previous?.sourceId} required disabled={pending} className={fieldClass}>{data.sources.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-        <label className="block space-y-1"><span className="font-semibold">Who can read</span><select value={tier} disabled={pending} onChange={(e) => { const option = tierOptions(data.org.kind).find((t) => t.value === e.target.value); if (option) setTier(option.value); }} className={fieldClass}>{tierOptions(data.org.kind).map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}</select></label>
-        <p className="text-sm text-muted-foreground">{tier === 'public' ? 'Any signed-in student can read this document.' : tier === 'members' ? 'All club members can read this document.' : tier === 'usg_internal' ? 'Only USG reviewers and admins can read this document.' : 'The president always has access. Select additional officer positions.'}</p>
-        {tier === 'officers' && <fieldset className="space-y-2"><legend className="mb-2 font-semibold">Officer positions</legend>{data.positions.filter((p) => p.slug !== 'president').map((p) => <label key={p.slug} className="flex min-h-9 items-center gap-2"><input type="checkbox" name="allowedPositions" value={p.slug} defaultChecked={previous?.allowedPositions.includes(p.slug)} disabled={pending} className="size-4 accent-primary" />{p.name}</label>)}</fieldset>}
+        <AccessFields orgKind={data.org.kind} tier={tier} onTierChange={setTier} positions={data.positions} defaultPositions={previous?.allowedPositions} disabled={pending} />
         <label className="block space-y-1"><span className="font-semibold">Markdown text</span><textarea name="bodyMd" defaultValue={previous?.bodyMd} required maxLength={100_000} rows={10} readOnly={pending} className="w-full rounded-md border border-input bg-background p-3 font-mono text-sm" /></label>
         <Button type="submit" disabled={pending}>{pending ? 'Reviewing…' : 'Review access'}</Button>
       </form> : <section className="space-y-5" aria-label="Review access">

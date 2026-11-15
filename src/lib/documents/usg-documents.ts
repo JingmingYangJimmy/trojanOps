@@ -1,17 +1,25 @@
 // Read models for the USG console's documents pages: USG's own documents, their versions and the
 // agents whose sources include them. Documents are read under the viewer's RLS (I1).
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import type { Actor, LibraryDocument, Tier } from '../contracts';
 import { getDb } from '../db/client';
-import { agentTemplates, agentTemplateVersions, orgs, sources } from '../db/schema';
+import { agentTemplates, agentTemplateVersions, orgs, positions, sources } from '../db/schema';
 import { requireConsole } from '../distribution/usg-view';
 import { TIER_RANK } from './access';
-import { getLibraryDocument, listLibraryDocuments, type ManagedDocument } from './library';
+import type { DocumentAccessEditor } from './document-page';
+import { documentAudience } from './knowledge-library';
+import { getLibraryDocument, listLibraryDocuments, managesLibrary, type ManagedDocument } from './library';
 
 export interface UsgDocumentUser { templateId: string; name: string; global: boolean }
 export interface UsgDocumentRow extends LibraryDocument { sourceKind: string; usedBy: UsgDocumentUser[] }
 export interface UsgDocumentsView { orgId: string; documents: UsgDocumentRow[] }
-export interface UsgDocumentView { orgId: string; document: ManagedDocument; usedBy: UsgDocumentUser[] }
+export interface UsgDocumentView {
+  orgId: string; document: ManagedDocument; usedBy: UsgDocumentUser[];
+  /** "All students", "All members", position names, or "Reviewer, Admin". */
+  whoCanRead: string;
+  /** Set only for a USG admin acting in USG, who manages USG's library. */
+  accessEditor: DocumentAccessEditor | null;
+}
 
 async function usgOrgId(): Promise<string | null> {
   const [usg] = await getDb().select({ id: orgs.id }).from(orgs).where(eq(orgs.kind, 'usg')).limit(1);
@@ -58,5 +66,19 @@ export async function usgDocumentView(actor: Actor, documentId: string): Promise
   if (!orgId) return null;
   const document = await getLibraryDocument(actor, orgId, documentId);
   if (!document) return null;
-  return { orgId, document, usedBy: (await usersOf())(document.sourceKind, document.tier) };
+  const [allPositions, canEdit, users] = await Promise.all([
+    getDb().select({ slug: positions.slug, name: positions.name, isOfficer: positions.isOfficer }).from(positions)
+      .where(eq(positions.orgId, orgId)).orderBy(asc(positions.name)),
+    managesLibrary(actor, orgId),
+    usersOf(),
+  ]);
+  const names = new Map(allPositions.map((p) => [p.slug, p.name]));
+  return {
+    orgId, document, usedBy: users(document.sourceKind, document.tier),
+    whoCanRead: documentAudience(document.tier, document.allowedPositions, names),
+    accessEditor: canEdit ? {
+      access: { tier: document.tier, allowedPositions: document.allowedPositions },
+      positions: allPositions.filter((p) => p.isOfficer).map(({ slug, name }) => ({ slug, name })),
+    } : null,
+  };
 }

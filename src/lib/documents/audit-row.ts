@@ -33,6 +33,7 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   'position.create': 'Position created',
   'position.assign': 'Position assigned',
   'position.unassign': 'Position unassigned',
+  'document.access': 'Document access changed',
 };
 
 export interface AuditRow {

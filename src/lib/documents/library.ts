@@ -7,11 +7,12 @@ import { z } from 'zod';
 import { requireUser } from '../api';
 import { grantsFor, isUsgAdmin, isUuid } from '../authz';
 import { now } from '../clock';
-import { AppError, type Actor, type LibraryDocument } from '../contracts';
+import { AppError, type Actor, type LibraryDocument, type Tier } from '../contracts';
 import { getDb } from '../db/client';
 import { documents, orgs, positions, sources } from '../db/schema';
 import { withActor } from '../db/with-actor';
 import { audit } from '../gateway/audit';
+import { tierLabels, tierOptions } from './library-view';
 
 /** The sources a club's library shows: all of its own, plus USG's public ones (rulebook, public). */
 async function librarySourceIds(orgId: string): Promise<string[]> {
@@ -49,16 +50,41 @@ export async function listLibraryDocuments(actor: Actor, orgId: string): Promise
       .orderBy(desc(documents.createdAt), asc(documents.title)));
 }
 
+const tierSchema = z.enum(Object.keys(tierLabels) as [Tier, ...Tier[]]);
+const positionsSchema = z.array(z.string().regex(/^[a-z0-9_-]+$/)).max(50).default([]);
+
 export const uploadDocumentInput = z.object({
   sourceId: z.uuid(),
   title: z.string().trim().min(1).max(200),
-  tier: z.enum(['public', 'members', 'officers', 'usg_internal']),
-  allowedPositions: z.array(z.string().regex(/^[a-z0-9_-]+$/)).default([]),
+  tier: tierSchema,
+  allowedPositions: positionsSchema,
   bodyMd: z.string().min(1).max(100_000),
 });
 export type UploadDocumentInput = z.infer<typeof uploadDocumentInput>;
 
 const invalid = (message: string) => new AppError({ code: 'invalid', message });
+
+/** Checks a tier and officer positions against the org: the tier must be one of tierOptions for the
+ * org's kind (USG internal only in USG); positions go only with Officers and must be the org's officer
+ * positions. Returns the positions deduplicated. Shared by upload and access changes. */
+async function checkAccess(orgId: string, access: { tier: Tier; allowedPositions: string[] }): Promise<string[]> {
+  const db = getDb();
+  const [org] = await db.select({ kind: orgs.kind }).from(orgs).where(eq(orgs.id, orgId));
+  if (!org || !tierOptions(org.kind).some((t) => t.value === access.tier)) {
+    throw invalid('Only USG can have USG-internal documents.');
+  }
+  const allowedPositions = [...new Set(access.allowedPositions)];
+  if (allowedPositions.length > 0) {
+    if (access.tier !== 'officers') throw invalid('Positions can be chosen only for officers documents.');
+    // Only officer positions: an officers document is never opened to plain members this way.
+    const known = new Set((await db.select({ slug: positions.slug }).from(positions)
+      .where(and(eq(positions.orgId, orgId), eq(positions.isOfficer, true), inArray(positions.slug, allowedPositions))))
+      .map((p) => p.slug));
+    const unknown = allowedPositions.filter((s) => !known.has(s));
+    if (unknown.length > 0) throw invalid(`This club has no officer position "${unknown[0]}".`);
+  }
+  return allowedPositions;
+}
 
 /** The actor manages orgId's library: it is the active org and the actor is its president, or a USG
  * admin in USG. The same condition withActor uses to set app.manage_org. */
@@ -81,21 +107,7 @@ export async function uploadDocument(actor: Actor, orgId: string, input: UploadD
     .where(and(eq(sources.id, input.sourceId), eq(sources.orgId, orgId)));
   if (!source) throw invalid('Choose one of this club’s sources.');
 
-  if (input.tier === 'usg_internal') {
-    const [org] = await db.select({ kind: orgs.kind }).from(orgs).where(eq(orgs.id, orgId));
-    if (org?.kind !== 'usg') throw invalid('Only USG can upload USG-internal documents.');
-  }
-
-  const allowedPositions = [...new Set(input.allowedPositions)];
-  if (allowedPositions.length > 0) {
-    if (input.tier !== 'officers') throw invalid('Positions can be chosen only for officers documents.');
-    // Only officer positions: an officers document is never opened to plain members this way.
-    const known = new Set((await db.select({ slug: positions.slug }).from(positions)
-      .where(and(eq(positions.orgId, orgId), eq(positions.isOfficer, true), inArray(positions.slug, allowedPositions))))
-      .map((p) => p.slug));
-    const unknown = allowedPositions.filter((s) => !known.has(s));
-    if (unknown.length > 0) throw invalid(`This club has no officer position "${unknown[0]}".`);
-  }
+  const allowedPositions = await checkAccess(orgId, input);
 
   const id = randomUUID();
   const createdAt = now();
@@ -155,7 +167,7 @@ export async function publishDocumentVersion(
   return { version };
 }
 
-export interface ManagedDocument extends LibraryDocument { bodyMd: string; sourceKind: string }
+export interface ManagedDocument extends LibraryDocument { bodyMd: string; sourceKind: string; allowedPositions: string[] }
 
 /** One document of orgId's library with its text, read under the actor's own RLS scope for that org. */
 export async function getLibraryDocument(actor: Actor, orgId: string, documentId: string): Promise<ManagedDocument | null> {
@@ -166,10 +178,58 @@ export async function getLibraryDocument(actor: Actor, orgId: string, documentId
     tx.select({
       id: documents.id, title: documents.title, tier: documents.tier, sourceId: documents.sourceId,
       sourceName: sources.name, sourceKind: sources.kind, version: documents.version,
-      createdAt: documents.createdAt, bodyMd: documents.bodyMd,
+      createdAt: documents.createdAt, bodyMd: documents.bodyMd, allowedPositions: documents.allowedPositions,
     })
       .from(documents)
       .innerJoin(sources, eq(sources.id, documents.sourceId))
       .where(eq(documents.id, documentId)));
   return doc ?? null;
+}
+
+export const documentAccessInput = z.object({ tier: tierSchema, allowedPositions: positionsSchema }).strict();
+export type DocumentAccessInput = z.input<typeof documentAccessInput>;
+export interface DocumentAccess { tier: Tier; allowedPositions: string[] }
+
+const sameAccess = (a: DocumentAccess, b: DocumentAccess) => a.tier === b.tier
+  && a.allowedPositions.length === b.allowedPositions.length && a.allowedPositions.every((p) => b.allowedPositions.includes(p));
+
+/** The library's manager changes who can read one of the org's documents (tier and, for Officers,
+ * positions). A document is one row whose text each new version replaces in place, so the change
+ * covers every version at once and no earlier version keeps a wider audience (decision 34). The
+ * documents_read_grants trigger recomputes read_grants; the documents_update policy checks
+ * app.manage_org, and the row must be readable in the manager's scope to be updated. */
+export async function updateDocumentAccess(
+  actor: Actor, orgId: string, documentId: string, input: DocumentAccessInput,
+): Promise<DocumentAccess> {
+  const userId = requireUser(actor);
+  if (!await managesLibrary(actor, orgId)) {
+    throw new AppError({ code: 'forbidden', message: 'Only the club president, or a USG admin for USG, can change who can read a document. Switch to that organization first.' });
+  }
+  if (!isUuid(documentId)) throw new AppError({ code: 'not_found', message: 'Document not found.' });
+  const result = documentAccessInput.safeParse(input);
+  if (!result.success) throw invalid('Choose who can read this document: Public, Members, Officers or, for USG, USG internal.');
+  const parsed = result.data;
+  const allowedPositions = await checkAccess(orgId, parsed);
+  const next: DocumentAccess = { tier: parsed.tier, allowedPositions };
+  const [sourceIds, grants] = await Promise.all([librarySourceIds(orgId), grantsFor(userId, orgId)]);
+  await withActor(actor, { grants, sourceIds }, async (tx) => {
+    const [current] = await tx.select({ tier: documents.tier, allowedPositions: documents.allowedPositions, version: documents.version })
+      .from(documents).where(and(eq(documents.id, documentId), eq(documents.orgId, orgId))).for('update');
+    if (!current) throw new AppError({ code: 'not_found', message: 'Document not found.' });
+    if (sameAccess(current, next)) throw invalid('Access is unchanged. Choose a different audience, then save.');
+    // No RETURNING: a narrower audience may leave the row unreadable in this scope.
+    const updated = await tx.update(documents).set({ tier: next.tier, allowedPositions: next.allowedPositions })
+      .where(and(eq(documents.id, documentId), eq(documents.orgId, orgId)));
+    if (updated.count !== 1) {
+      throw new AppError({ code: 'forbidden', message: 'Only the organization’s manager can change who can read a document.' });
+    }
+    await audit('document.access', {
+      actorUserId: userId, actingOrgId: orgId, targetType: 'document', targetId: documentId,
+      details: {
+        version: current.version, fromTier: current.tier, fromPositions: current.allowedPositions,
+        tier: next.tier, allowedPositions: next.allowedPositions,
+      },
+    }, tx);
+  });
+  return next;
 }
