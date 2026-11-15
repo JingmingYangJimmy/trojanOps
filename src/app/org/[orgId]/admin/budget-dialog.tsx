@@ -21,7 +21,10 @@ export function BudgetButton({ data, member, onSaved }: {
 }) {
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
-  const [amount, setAmount] = useState(() => dollars(member.limitMicro));
+  // An inherited member starts empty, not prefilled with the club's figure: saving that figure
+  // would quietly give them a limit of their own, which then stops following the club's quota —
+  // and nothing on this page can take it back. The empty-field error says what to type instead.
+  const [amount, setAmount] = useState(() => (member.inherited ? '' : dollars(member.limitMicro)));
   const [touched, setTouched] = useState(false);
   const [invalid, setInvalid] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
@@ -33,7 +36,7 @@ export function BudgetButton({ data, member, onSaved }: {
   // Opening the dialog, rather than an effect, is what re-reads the member's current limit: after
   // a save the page refreshes, and the next open starts from the figure the server now holds.
   function open() {
-    setAmount(dollars(member.limitMicro));
+    setAmount(member.inherited ? '' : dollars(member.limitMicro));
     setTouched(false);
     setInvalid(null);
     setFailure(null);
@@ -42,7 +45,7 @@ export function BudgetButton({ data, member, onSaved }: {
 
   function save() {
     if (pending) return;
-    const parsed = parseDollars(amount);
+    const parsed = parseDollars(amount, data.clubLimitMicro);
     if ('error' in parsed) {
       setInvalid(parsed.error);
       document.getElementById(fieldId)?.focus();
@@ -111,7 +114,7 @@ export function BudgetButton({ data, member, onSaved }: {
               }}
               onBlur={() => {
                 if (!touched) return;
-                const parsed = parseDollars(amount);
+                const parsed = parseDollars(amount, data.clubLimitMicro);
                 setInvalid('error' in parsed ? parsed.error : null);
               }}
               className="h-full w-full bg-background tabular-nums outline-none"

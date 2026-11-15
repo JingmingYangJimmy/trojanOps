@@ -193,7 +193,15 @@ describe('the succession confirmation (D7)', () => {
   it('names the agents that change hands, and what does not change', () => {
     expect(copy.points[1]).toBe('Jordan Reyes gains Funding pre-check.');
     expect(copy.points[2]).toBe('Taylor Brooks loses Funding pre-check.');
-    expect(copy.points.at(-1)).toBe('Documents, installations and budgets do not change.');
+    expect(copy.points.at(-1)).toBe('No document, installation or budget is edited.');
+  });
+
+  // Document grants follow the position (§5 allowed_positions), so officer documents move even
+  // through an agent whose audience is "All members" — the agent list above does not cover them.
+  it('says that the position’s documents move with it', () => {
+    expect(copy.points).toContain(
+      "Documents granted to Treasurer move with the office: Jordan Reyes will be able to read them through this club's agents, and Taylor Brooks will not.",
+    );
   });
 
   it('counts only the agents the position actually opens', () => {
@@ -202,7 +210,7 @@ describe('the succession confirmation (D7)', () => {
     // A turned-off agent gives nobody access, so a succession does not move it.
     expect(agentsForPosition([agent({ status: 'disabled' })], 'treasurer')).toHaveLength(0);
     expect(transferConfirmation(club({ agents: [] }), position(), jordan).points[1])
-      .toBe("No agent in Startup Club is limited to Treasurer, so nobody's agents change.");
+      .toBe("No agent Startup Club has switched on is limited to Treasurer, so nobody's agents change.");
   });
 
   it('does not promise an agent the new holder can already run', () => {
@@ -225,7 +233,12 @@ describe('the succession confirmation (D7)', () => {
   it('handles a vacant office without inventing an outgoing holder', () => {
     const points = transferConfirmation(club(), position({ holders: [] }), jordan).points;
     expect(points[0]).toBe('Jordan Reyes becomes Treasurer of Startup Club. No one holds it today.');
-    expect(points).toHaveLength(3);
+    // The documents sentence names no outgoing holder either.
+    expect(points).toContain(
+      "Documents granted to Treasurer move with the office, so Jordan Reyes will be able to read them through this club's agents.",
+    );
+    expect(points.join(' ')).not.toContain('will not.');
+    expect(points).toHaveLength(4);
   });
 });
 

@@ -105,7 +105,7 @@ export type DollarParse = { micro: number } | { error: string };
  * `$0.00` is a limit a president means (D5 sets Casey to it), so an empty field is a mistake to
  * explain rather than a zero to assume. Each refusal says what to type instead.
  */
-export function parseDollars(input: string): DollarParse {
+export function parseDollars(input: string, ceilingMicro?: number): DollarParse {
   const text = input.trim().replace(/^\$/, '').trim();
   if (text === '') {
     return { error: 'Enter an amount in dollars, such as 0.50. Enter 0.00 to stop this member from running agents.' };
@@ -119,7 +119,16 @@ export function parseDollars(input: string): DollarParse {
   if (!/^\d+(\.\d{1,2})?$/.test(text)) {
     return { error: 'Enter an amount in dollars and cents, such as 0.50.' };
   }
-  return { micro: Math.round(Number(text) * 1_000_000) };
+  const micro = Math.round(Number(text) * 1_000_000);
+  // Past this the route answers with a raw schema message, which says nothing a president can act
+  // on. The club's own quota is the real ceiling, and A re-checks it either way.
+  if (!Number.isSafeInteger(micro)) {
+    return { error: 'That is larger than any budget this club could have. Enter a smaller amount, such as 5.00.' };
+  }
+  if (ceilingMicro !== undefined && micro > ceilingMicro) {
+    return { error: `A member's limit cannot be more than the club's monthly quota, ${usd(ceilingMicro)}.` };
+  }
+  return { micro };
 }
 
 /** What a saved limit says back, so the president can see the zero took. */
@@ -154,7 +163,7 @@ export function transferState({ position, candidates }: PositionRow): TransferSt
 
 /** Why the action is missing from a row, rather than a button that could only fail. */
 export const transferUnavailable: Record<Exclude<TransferState, 'available'>, string> = {
-  shared: 'Every member holds this position, so there is nothing to hand over.',
+  shared: 'This is not an officer position, so it is not handed over one person at a time.',
   'no-candidates': 'Everyone in this club already holds it.',
   multiple: 'More than one person holds this office. Resolve its memberships before transferring it.',
 };
@@ -211,7 +220,7 @@ export function transferConfirmation(
       : `${to.displayName} becomes ${position.name} of ${data.org.name}. No one holds it today.`,
   ];
   if (moving.length === 0) {
-    points.push(`No agent in ${data.org.name} is limited to ${position.name}, so nobody's agents change.`);
+    points.push(`No agent ${data.org.name} has switched on is limited to ${position.name}, so nobody's agents change.`);
   } else {
     points.push(gained.length > 0
       ? `${to.displayName} gains ${names(gained)}.`
@@ -219,7 +228,20 @@ export function transferConfirmation(
     if (lost.length > 0) points.push(`${holder?.displayName} loses ${names(lost)}.`);
     else if (holder) points.push(`${holder.displayName} keeps ${names(moving)} through another position.`);
   }
-  points.push('Documents, installations and budgets do not change.');
+  // Document grants follow the position (§5 `allowed_positions`), so officer documents move even
+  // through agents whose audience is "All members" — the ones named above do not cover it. Saying
+  // "documents do not change" was false, and it contradicted D4 minutes earlier in the demo.
+  points.push(
+    holder
+      ? `Documents granted to ${position.name} move with the office: ${to.displayName} will be able to read them through this club's agents, and ${holder.displayName} will not.`
+      : `Documents granted to ${position.name} move with the office, so ${to.displayName} will be able to read them through this club's agents.`,
+  );
+  points.push('No document, installation or budget is edited.');
+  if (position.slug === 'president') {
+    points.push(
+      `You will no longer be able to manage ${data.org.name}. Only ${to.displayName} will be able to hand the presidency back.`,
+    );
+  }
 
   return {
     title: `Transfer ${position.name} to ${to.displayName}?`,
