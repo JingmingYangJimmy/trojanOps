@@ -1,6 +1,8 @@
 // Owner: A (WP-4, real by H11). STUB: in-memory limits with the §15 seed values; nothing is spent
-// except Lee's $0.04 of public-agent usage today.
-import { AppError, type Actor, type QuotaRemaining, type QuotaTarget } from '../contracts';
+// except Lee's $0.04 of public-agent usage today. hold and settle are the gateway's §7 step 4 and
+// step 8 hooks; they write nothing until slice 2 (ai_usage rows, quota.blocked).
+import { AppError, type Actor, type EffectiveAgent, type QuotaRemaining, type QuotaTarget } from '../contracts';
+import { MOCK_COST_MICRO } from '../runtime/mock';
 import { INSTALLATION, ORG, USER } from '@db/seed/ids';
 
 const key = (t: QuotaTarget) => [t.scope, t.orgId ?? '', t.userId ?? '', t.installationId ?? ''].join('|');
@@ -36,4 +38,24 @@ export async function remaining(target: QuotaTarget): Promise<QuotaRemaining> {
   return { scope: target.scope, limitMicro, spentMicro, remainingMicro: Math.max(0, limitMicro - spentMicro) };
 }
 
-export const quota = { setLimit, remaining };
+export interface QuotaHold {
+  runId: string;
+  holdMicro: number;
+}
+
+/** §7 step 4: holds the estimated cost at every level, or throws quota_exceeded. STUB: always holds
+ * the mock's flat cost and writes nothing. TODO(WP-4 slice 2): ai_usage hold, quota.blocked, 429. */
+export async function hold(agent: EffectiveAgent, userId: string, runId: string): Promise<QuotaHold> {
+  void agent;
+  void userId;
+  return { runId, holdMicro: MOCK_COST_MICRO };
+}
+
+/** §7 step 8: settles a hold with the actual cost (0 for a failed run). STUB: writes nothing.
+ * TODO(WP-4 slice 2): ai_usage settle row for actual − hold. */
+export async function settle(held: QuotaHold, actualMicro: number): Promise<void> {
+  void held;
+  void actualMicro;
+}
+
+export const quota = { setLimit, remaining, hold, settle };
