@@ -20,9 +20,9 @@ export function ConnectorPreviewPanel({ preview }: { readonly preview: Connector
   return <>
     <PageHeader title={data.title} description={data.description} action={back} />
     <div className="space-y-4">
-      <section aria-labelledby="connector-summary-heading" className="space-y-2 rounded-md border border-border bg-muted p-4">
-        <h2 id="connector-summary-heading" className="flex items-center gap-2 font-semibold">AI summary {data.isDemo && <Badge>Demo</Badge>}</h2>
-        <p>{data.summary}</p>
+      <section aria-labelledby="connector-summary-heading" className="space-y-3 rounded-md border border-border border-l-4 border-l-primary bg-gold-25 p-6">
+        <h2 id="connector-summary-heading" className="flex items-center gap-3 text-xl font-bold leading-7 text-primary">AI summary {data.isDemo && <Badge>Demo</Badge>}</h2>
+        <p className="text-base leading-relaxed">{data.summary}</p>
         {data.isDemo && <p className="text-sm text-muted-foreground">Demo summary based on this CSV.</p>}
       </section>
       <p className="text-sm text-muted-foreground">Source: <span className="font-mono text-xs">{data.source}</span>. Read-only preview; viewing this page does not import or change records.</p>
