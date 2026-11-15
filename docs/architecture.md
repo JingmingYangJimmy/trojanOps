@@ -553,6 +553,12 @@ Mock runtime (`runtime/mock.ts`):
   and funding example for treasurers and presidents, and for a `default` template its "Distribute to
   the target clubs now" box (on by default) then calls `distribute` (decision 31). A `required`
   template is still distributed from its page with typed confirmation.
+- **Create a club agent:** `createClubTemplate(actor, orgId, input)` (same file, the club's
+  president, "Create agent" on `/org/[orgId]/admin`, also `POST /api/orgs/:orgId/templates`)
+  inserts an `org` template with version 1 for all members or named officer positions (never
+  `public`, never `usg_internal`) and installs it in that club, enabled and tracking latest, in the
+  same transaction. The dialog starts from a "Meeting recap" example. Opening it to all students is
+  the catalog's publish action (decision 32).
 - **Distribute:** `distribute(templateId)` (USG; `required` or `default`) sets `distributed_at` and
   upserts an installation (`track='latest'`, `enabled=true`) in every active club in `target` (`all`
   or a cohort). Existing overrides are kept; `required` forces `enabled=true`. Idempotent.

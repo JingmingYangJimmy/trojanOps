@@ -12,8 +12,11 @@ import { ClubAgents, ClubBudget, SectionTitle } from './admin-sections';
 import { MembersTable } from './members-table';
 import { PositionsTable } from './positions-table';
 
-export default async function ClubAdminPage({ params }: { params: Promise<{ orgId: string }> }) {
+export default async function ClubAdminPage({ params, searchParams }: {
+  params: Promise<{ orgId: string }>; searchParams: Promise<{ created?: string }>;
+}) {
   const { orgId } = await params;
+  const { created } = await searchParams;
   const actor = await getActor();
   if (!actor.userId) {
     return (
@@ -103,7 +106,7 @@ export default async function ClubAdminPage({ params }: { params: Promise<{ orgI
           <MembersTable key={`${data.org.id}:members`} data={data} />
         </section>
 
-        <ClubAgents data={data} />
+        <ClubAgents data={data} justCreated={created === '1'} />
       </div>
     </>
   );

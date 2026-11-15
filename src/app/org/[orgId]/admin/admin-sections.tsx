@@ -8,6 +8,8 @@ import { audienceLabel, distributionLabels, statusLabels } from '../catalog/cata
 import { chip, clubBudget, panel, row } from './admin-view';
 import { creditLabel } from '@/lib/gateway/prices';
 import { ModelControl } from './model-control';
+import { CreateClubAgent } from './create-agent';
+import { SuccessNotice } from '@/app/usg/templates/console-ui';
 
 export function SectionTitle({ id, children }: { id: string; children: React.ReactNode }) {
   return <h2 id={id} className="text-[20px] font-semibold leading-7">{children}</h2>;
@@ -70,24 +72,30 @@ export function ClubBudget({ data }: { data: ClubAdmin }) {
 // ---------------------------------------------------------------------------------------------
 // The agents installed in this club
 
-export function ClubAgents({ data }: { data: ClubAdmin }) {
+export function ClubAgents({ data, justCreated = false }: { data: ClubAdmin; justCreated?: boolean }) {
+  const officers = data.positions.filter(p => p.isOfficer).map(({ slug, name }) => ({ slug, name }));
   return (
     <section aria-labelledby="club-agents" className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <SectionTitle id="club-agents">Agents and models</SectionTitle>
           <p className="text-muted-foreground">
-            Who each agent is for. Turning one on, or opening it to all students, happens in the catalog.
+            Who each agent is for. Create your own agent for members, or turn one on and open it to all
+            students in the catalog.
           </p>
         </div>
-        <Link href={`/org/${data.org.id}/catalog`} className="text-primary underline">Open catalog</Link>
+        <div className="flex items-center gap-4">
+          <Link href={`/org/${data.org.id}/catalog`} className="text-primary underline">Open catalog</Link>
+          <CreateClubAgent orgId={data.org.id} clubName={data.org.name} officerPositions={officers} />
+        </div>
       </div>
+      <SuccessNotice message={justCreated ? 'Agent created.' : null} />
 
       {data.agents.length === 0 ? (
         <div className={`${panel} bg-muted p-4`}>
           <p>
-            No agents are installed in {data.org.name} yet. USG distributes agent templates to clubs;
-            ask USG to distribute the one this club needs.
+            No agents are installed in {data.org.name} yet. Create one for your members, or ask USG
+            to distribute the template this club needs.
           </p>
         </div>
       ) : (
