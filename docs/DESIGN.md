@@ -60,3 +60,23 @@ Capture chat before changes, then C1–C6, Usage, Documents, Document, Retrieval
 at desktop and narrow widths. Verify keyboard operation, reflow, live feedback and privacy.
 The gap to close is missing cost visibility, chat controls and knowledge views; decorative
 metrics, marketing cards and a conversation sidebar are outside the brief.
+
+## Template administration
+
+Template detail uses four local Radix tabs on its existing route, Configuration, Knowledge base,
+Distribution and Version history. Tabs have a Cardinal underline, keyboard arrow navigation and
+visible focus. Mounted hidden panels retain drafts when switching tabs. Knowledge base uses a
+190px connected-source rail beside a searchable document table. USG sources show authorized
+document metadata and link to existing document detail for version management. Club sources show
+their ownership and point administrators to each club's library. Empty sources and no search
+results have distinct messages. Adding a public rulebook document requires reviewing its shared
+source and public audience in the upload dialog. Source changes publish an immutable template
+version through the configuration editor. Retired templates retain read-only knowledge views.
+
+Models share the chat's demo model catalog and gateway prices, grouped by pricing class. The
+saved default applies to a class. Distribution has one persisted target control and one rollout
+trigger. Rollout reviews the saved target, affected clubs and audience. Unsaved settings must be
+saved before rollout. Retirement sits beneath the distribution form as an outline action.
+
+The knowledge layout follows Dify's connected-knowledge and document-list interaction patterns,
+using TrojanOps typography, tokens and permissions.
