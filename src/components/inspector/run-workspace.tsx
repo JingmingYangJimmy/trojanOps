@@ -2,7 +2,7 @@
 
 import { AlertCircle, Check, Clock } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState, type CSSProperties } from 'react';
 import { Button } from '@/components/ui/button';
 import type { ApiError, ModelClass } from '@/lib/contracts';
 import type { ChatConfig } from '@/lib/documents/run-config';
@@ -18,6 +18,7 @@ import { Transcript } from './transcript';
 export interface RunWorkspaceProps {
   readonly installationId: string; readonly agentName: string; readonly demoRuntime: boolean;
   readonly config?: ChatConfig;
+  readonly headerSpacePx?: number;
 }
 
 export function validateInput(text: string): string | null {
@@ -30,7 +31,8 @@ export function RunErrorBanner({ error, onDismiss }: { readonly error: ApiError;
   return <div role="alert" className="mb-3 flex flex-wrap items-start gap-2 rounded-md border border-primary bg-background px-4 py-3"><AlertCircle aria-hidden className="mt-0.5 size-4 shrink-0 text-primary" /><p className="min-w-0 flex-1">{error.message}{error.code === 'unauthenticated' && <>{' '}<Link href="/" className="text-primary underline">Choose a persona</Link></>}</p><Button type="button" variant="ghost" onClick={onDismiss}>Dismiss</Button></div>;
 }
 
-export function RunWorkspace({ installationId, agentName, demoRuntime, config }: RunWorkspaceProps) {
+export function RunWorkspace({ installationId, agentName, demoRuntime, config, headerSpacePx = 220 }: RunWorkspaceProps) {
+  const frameStyle: CSSProperties & { readonly '--chat-height': string } = { '--chat-height': `calc(100dvh - ${headerSpacePx}px)` };
   const [state, dispatch] = useReducer(runReducer, initialRunState);
   const [context, setContext] = useState(config);
   const [input, setInput] = useState('');
@@ -111,7 +113,7 @@ export function RunWorkspace({ installationId, agentName, demoRuntime, config }:
   }
   return <>
     <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">{context && <><span className="rounded-sm border border-border px-2 py-1">{context.audienceLabel}</span><span>Template v{context.templateVersion}</span><span>Paid by {context.scope.billedClub}</span></>}<Button type="button" variant="ghost" className="ml-auto" disabled={state.running || Boolean(playingId)} onClick={reset}>New conversation</Button></div>
-    <div className="flex flex-col items-start gap-[24px] lg:flex-row"><section aria-label={`Chat with ${agentName}`} className="flex h-[calc(100dvh-340px)] min-h-[360px] lg:h-[calc(100dvh-220px)] w-full min-w-0 max-w-[720px] flex-1 flex-col rounded-md border border-border bg-background">
+    <div style={frameStyle} className="flex flex-col items-start gap-[24px] lg:flex-row"><section aria-label={`Chat with ${agentName}`} className="flex h-[calc(100dvh-340px)] min-h-[360px] lg:h-[var(--chat-height)] w-full min-w-0 max-w-[720px] flex-1 flex-col rounded-md border border-border bg-background">
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
       {!state.turns.length && context && <section className="mb-6"><h2 className="text-xl font-semibold">What {agentName} can read</h2><p className="mt-2">{context.scope.sentence}</p><p className="mt-2 text-sm text-muted-foreground">{context.scope.sources.join(' · ')}</p><p className="mt-1 text-sm">As {[...new Set(context.scope.grantLabels)].join(', ')}.</p><div className="mt-4 grid gap-2">{context.starters.map((starter) => <button key={starter} type="button" onClick={() => fill(starter)} className="min-h-9 rounded-md border border-border px-3 py-2 text-left hover:bg-accent">{starter}</button>)}</div></section>}
       {(state.turns.length > 0 || !context) && <Transcript turns={state.turns} actions={state.actions} agentName={agentName} demoRuntime={demoRuntime} installationId={installationId} orgId={context?.orgId} onConfirm={(id) => void confirm(id)} onReject={(id) => void reject(id)} onRetry={(text) => void run(text)} onEdit={fill} playingId={playingId} stoppedId={stoppedId} onPlaybackDone={playbackDone} onAnnounce={setAnnouncement} onInspect={(id, runId) => { setSelectedRunId(runId); setHighlightedId(id || null); inspectorRef.current?.scrollIntoView({ block: 'nearest' }); inspectorRef.current?.focus(); }} />}
@@ -119,7 +121,7 @@ export function RunWorkspace({ installationId, agentName, demoRuntime, config }:
       </div>
       <Composer config={context} agentName={agentName} input={input} model={model} running={state.running} playing={Boolean(playingId)} error={inputError} charge={charge} textareaRef={textarea} onInput={(value) => { setInput(value); if (inputError) setInputError(validateInput(value)); }} onModel={setModel} onRun={() => void run(input)} onStop={stop} />
       <p aria-live="polite" role="status" className={state.running ? 'flex min-h-5 items-center gap-2 px-4 pb-3 text-sm text-muted-foreground' : 'sr-only'}>{state.running && <Clock aria-hidden className="size-4" />}{announcement}</p>
-    </section><div ref={inspectorRef} tabIndex={-1} className="w-[384px] max-w-full shrink-0 lg:max-h-[calc(100dvh-220px)] lg:overflow-y-auto">
+    </section><div ref={inspectorRef} tabIndex={-1} className="w-[384px] max-w-full shrink-0 lg:max-h-[var(--chat-height)] lg:overflow-y-auto">
       {inspector ? <><div className="border border-border bg-muted p-4 text-sm"><p className="font-semibold">Finished run</p><p className="mt-2"><Check aria-hidden className="mr-1 inline size-4" />Checked access · {new Set(inspector.runGrants.map((g) => g.label)).size} grants</p><p>Read {inspector.readInRun.length} of {inspector.permitted.length} permitted documents</p><p>Paid by {inspector.billedClub} · {creditLabel(inspector.costMicro)} · Audit #{inspector.auditEventId}</p></div><Inspector inspector={inspector} highlightedId={highlightedId} /></> : context ? <ScopePanel config={context} /> : <InspectorPlaceholder />}
     </div></div>
     <p className="mt-3 max-w-[720px] text-xs leading-5 text-muted-foreground">Only you can see what you ask and what the agent answers. {context?.scope.billedClub ?? "The club"}&apos;s president and USG see that you ran it, when, what it cost and which documents it read.</p>

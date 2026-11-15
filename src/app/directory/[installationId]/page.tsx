@@ -34,6 +34,6 @@ export default async function PublicAgentPage({ params }: { readonly params: Pro
     <div className="mb-6 flex flex-wrap items-center gap-3 text-muted-foreground">
       <span>{agent.orgName}</span><Badge><Users aria-hidden="true" />All students</Badge><span>Template v{agent.templateVersion}</span>
     </div>
-    <RunWorkspace key={`${actor.userId}:${actor.activeOrgId}:${agent.installationId}`} installationId={agent.installationId} agentName={agent.name} demoRuntime={isDemoRuntime()} config={data.workspace} />
+    <RunWorkspace key={`${actor.userId}:${actor.activeOrgId}:${agent.installationId}`} installationId={agent.installationId} agentName={agent.name} demoRuntime={isDemoRuntime()} config={data.workspace} headerSpacePx={320} />
   </>;
 }

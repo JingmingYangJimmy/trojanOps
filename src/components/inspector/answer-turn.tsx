@@ -34,7 +34,7 @@ function Citation({ source, n, tier, installationId, orgId, onInspect, compact }
     if (value && installationId) void citationAccess(installationId, source.documentId).then((next) => { if (current === request.current) setAccess(next); }, () => { if (current === request.current) setAccess({ allowed: false, reason: 'Could not check access. Close this source and try again.' }); });
   }
   const allowed = !installationId || access?.allowed;
-  return <Popover open={open} onOpenChange={show}><PopoverTrigger asChild><button type="button" onPointerEnter={(e) => { if (e.pointerType === 'mouse') { keepOpen(); show(true); } }} onPointerLeave={(e) => { if (e.pointerType === 'mouse') leave(); }} onFocus={(e) => { if (!open && e.currentTarget.matches(':focus-visible')) show(true); }}
+  return <Popover open={open} onOpenChange={show}><PopoverTrigger asChild><button type="button" onClick={(e) => { if (open) e.preventDefault(); }} onPointerEnter={(e) => { if (e.pointerType === 'mouse') { keepOpen(); show(true); } }} onPointerLeave={(e) => { if (e.pointerType === 'mouse') leave(); }} onFocus={(e) => { if (!open && e.currentTarget.matches(':focus-visible')) show(true); }}
     className="inline-flex min-h-7 items-center gap-1 rounded-sm border border-input px-2 align-baseline text-sm font-semibold hover:bg-accent" aria-label={`Source ${n}: ${source.title}`}>
     {compact ? `[${n}]` : <><FileText aria-hidden className="size-3" />{n} {source.title} · {tierLabels[tier]}</>}
   </button></PopoverTrigger><PopoverContent align="start" onPointerEnter={keepOpen} onPointerLeave={leave} onOpenAutoFocus={(e) => e.preventDefault()}>
@@ -92,7 +92,7 @@ export function AnswerTurn(p: AnswerTurnProps) {
     } catch (error) { if (error instanceof Error) { setCopyError(true); setCopied(false); } else throw error; }
   }
   return <article aria-busy={p.playing || undefined}>
-    <div className="mb-3 flex flex-wrap items-center gap-2"><p className="text-[14px] font-semibold leading-5 text-primary">AI · {p.agentName}</p>
+    <div className="mb-3 flex flex-wrap items-center gap-2"><h2 className="text-[14px] font-semibold leading-5 text-primary">AI · {p.agentName}</h2>
       <span className="rounded-sm border border-border px-2 py-1 text-xs">{p.demoRuntime ? 'Demo runtime: placeholder answer' : 'AI-generated'}</span>
       {highest !== 'public' && <span title={`This answer quotes ${tierLabels[highest]} documents. Check before sharing it outside the permitted group.`} className="ml-auto text-xs font-semibold"><Lock aria-hidden className="mr-1 inline size-3" />Uses {tierLabels[highest]} information</span>}
     </div>

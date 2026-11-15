@@ -52,10 +52,10 @@ const card = (status: ActionStatus) => renderToStaticMarkup(createElement(Pendin
 const text = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 
 describe('run page markup', () => {
-  it('labels turns "You" and with the agent name, as plain text', () => {
+  it('labels speakers and makes AI answers navigable as headings', () => {
     const html = transcript();
     expect(html).toContain('>You</p>');
-    expect(html).toContain('>AI · Club handoff</p>');
+    expect(html).toMatch(/<h2\b[^>]*>AI · Club handoff<\/h2>/);
     expect(html).toContain('What did the board decide last meeting?');
     expect(html).toContain('whitespace-pre-wrap');
     expect(html).toContain('−1 credit · Read 1 of 1 permitted documents · Audit #1042');

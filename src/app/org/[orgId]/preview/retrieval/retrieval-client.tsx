@@ -23,7 +23,7 @@ function Hit({ hit, orgId, blocked }: { readonly hit: RetrievalHit; readonly org
   const decision = accessDecisions[hit.reason];
   const Icon = decision.icon;
   return <li className="border-t border-border py-4"><div className="flex flex-wrap items-baseline gap-2"><span className="font-mono tabular-nums">{hit.score.toFixed(2)}</span><span className="font-semibold">{hit.title}</span><span className="rounded-sm border border-border px-2 text-xs">{tierLabels[hit.tier]}</span></div><p className="mt-1 text-sm text-muted-foreground">Chunk {String(hit.chunk.n).padStart(2, '0')} · {hit.chunk.heading}</p>
-    <p className="mt-2 whitespace-pre-wrap break-words text-[16px] leading-6"><Highlight text={hit.chunk.text} matched={hit.matched} /></p>
+    <p className="mt-2 max-w-[65ch] whitespace-pre-wrap break-words text-[16px] leading-6"><Highlight text={hit.chunk.text} matched={hit.matched} /></p>
     {blocked && <><p className="mt-2 flex items-center gap-1 font-semibold"><Icon aria-hidden className="size-4 shrink-0" />{decision.label}</p><p className="mt-1 text-sm text-muted-foreground">{fixes[hit.reason]}</p></>}
     <Link href={`/org/${orgId}/documents/${hit.documentId}#chunk-${String(hit.chunk.n).padStart(2, '0')}`} className="mt-2 inline-block text-sm text-primary underline">Open in document</Link>
   </li>;
