@@ -2,7 +2,7 @@
 // Owner: B. /usg/templates/[templateId]: the template's header with Distribute and Retire, then the
 // builder (Configure), its knowledge, distribution settings and version history.
 import Link from 'next/link';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { createColumnHelper, tableFeatures, useTable } from '@tanstack/react-table';
 import { ArrowLeft, ChevronDown, Lock } from 'lucide-react';
 import { Tabs } from 'radix-ui';
@@ -26,8 +26,11 @@ type Mutation = ReturnType<typeof useConsoleMutation>;
 
 const TABS = [['configure', 'Configure'], ['knowledge', 'Knowledge'], ['distribution', 'Distribution'], ['versions', 'Versions']] as const;
 
-export function TemplateDetail({ data }: { data: UsgTemplateView }) {
+export function TemplateDetail({ data, justDistributed = false }: { data: UsgTemplateView; justDistributed?: boolean }) {
   const { template } = data; const retired = template.status === 'retired';
+  // Created with "Distribute now": say so once, then drop the flag so a reload doesn't repeat it.
+  const [createdDistributed] = useState(justDistributed);
+  useEffect(() => { if (justDistributed) window.history.replaceState(null, '', window.location.pathname); }, [justDistributed]);
   const [name, setName] = useState(template.name); const [distribution, setDistribution] = useState(template.distribution);
   const [target, setTarget] = useState(template.target); const mutation = useConsoleMutation();
   const distributing = useConsoleMutation(); const retiring = useConsoleMutation();
@@ -84,7 +87,7 @@ export function TemplateDetail({ data }: { data: UsgTemplateView }) {
         <RetireDialog data={data} open={retireOpen} setOpen={setRetireOpen} mutation={retiring} />
       </div>}
     </header>
-    <SuccessNotice message={distributing.success ?? retiring.success} />
+    <SuccessNotice message={distributing.success ?? retiring.success ?? (createdDistributed ? 'Distributed successfully.' : null)} />
     {retired && <Alert><Lock aria-hidden="true" /><div><AlertTitle>Retired by USG</AlertTitle><AlertDescription>Runs are blocked for every installation. This template can no longer be changed or distributed.</AlertDescription></div></Alert>}
 
     <Tabs.Root value={tab} onValueChange={setTab} className="space-y-6">
@@ -126,8 +129,8 @@ function DistributeDialog({ data, blocked, mutation }: { data: UsgTemplateView; 
     event.preventDefault();
     if (required && confirmation !== data.template.name) { document.getElementById('distribute-confirmation')?.focus(); return; }
     mutation.run(async () => {
-      const result = await mutation.request(`/api/usg/templates/${data.template.id}/distribute`, 'POST', {}) as { count: number };
-      return `Distribution complete: ${result.count} installation${result.count === 1 ? '' : 's'} changed. Existing club overrides were kept.`;
+      await mutation.request(`/api/usg/templates/${data.template.id}/distribute`, 'POST', {});
+      return 'Distributed successfully.';
     }, () => setOpen(false));
   }
   return <Dialog open={open} onOpenChange={value => { setOpen(value); mutation.clear(); setConfirmation(''); }}>

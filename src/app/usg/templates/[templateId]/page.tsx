@@ -6,8 +6,10 @@ import { getActor } from '@/lib/identity';
 import { DeniedConsole } from '../console-ui';
 import { TemplateDetail } from './template-detail';
 
-export default async function TemplatePage({ params }: { params: Promise<{ templateId: string }> }) {
-  const actor = await getActor(); const { templateId } = await params;
+export default async function TemplatePage({ params, searchParams }: {
+  params: Promise<{ templateId: string }>; searchParams: Promise<{ distributed?: string }>;
+}) {
+  const actor = await getActor(); const { templateId } = await params; const { distributed } = await searchParams;
   let data;
   try { data = await usgTemplateView(actor, templateId); }
   catch (error) {
@@ -15,5 +17,5 @@ export default async function TemplatePage({ params }: { params: Promise<{ templ
     return <><PageHeader title="Agent template" /><DeniedConsole /></>;
   }
   if (!data) notFound();
-  return <TemplateDetail key={`${actor.userId}:${actor.activeOrgId}:${templateId}:${data.template.latestVersion}:${data.template.status}:${data.template.target}:${data.template.distribution}:${data.template.name}`} data={data} />;
+  return <TemplateDetail key={`${actor.userId}:${actor.activeOrgId}:${templateId}:${data.template.latestVersion}:${data.template.status}:${data.template.target}:${data.template.distribution}:${data.template.name}`} data={data} justDistributed={distributed === '1'} />;
 }

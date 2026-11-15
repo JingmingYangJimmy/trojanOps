@@ -29,9 +29,10 @@ export async function createTemplateAction(_previous: { readonly error: string |
   }
   // A default template can go out with its first version. If distribution fails, the template page
   // shows it undistributed with its Distribute action, so creation still lands there.
+  let distributed = false;
   if (form.get('distributeNow') === 'on' && form.get('distribution') === 'default') {
-    try { await distribute(actor, templateId); } catch (error) { if (!(error instanceof AppError)) throw error; }
+    try { await distribute(actor, templateId); distributed = true; } catch (error) { if (!(error instanceof AppError)) throw error; }
   }
   revalidatePath('/usg/templates');
-  redirect(`/usg/templates/${templateId}`);
+  redirect(`/usg/templates/${templateId}${distributed ? '?distributed=1' : ''}`);
 }
