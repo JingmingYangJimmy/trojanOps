@@ -9,7 +9,7 @@ Your paths are in `AGENTS.md`.
 |---|---|---|
 | WP-0 (lead) | H0–2 | Repo runs; contracts and every schema file frozen with the area owners; tables, role, RLS and trigger migrated; every stub merged |
 | WP-1 | H2–5 | `withActor` and the WP-0 RLS migration proven: the §10 visibility contract passes as `trojanops_app` |
-| WP-3 | H5–7 | Persona identity, active org, `grantsFor`, `capGrants`; Morgan and public-cap tests |
+| WP-3 | H5–7 | Persona identity and the demo sign-in at `/`, active org, `grantsFor`, `capGrants`; Morgan and public-cap tests |
 | WP-4 | H7–11 | `runAgent` §7 steps 1–3 and 5–8 on the mock runtime with the audit writer by H9; quota and billing by H11 |
 | WP-13 | H12–14, to H16 if time | Floor: `recruiting-qa` answers through one model call with its accessible documents |
 

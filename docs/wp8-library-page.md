@@ -16,7 +16,7 @@ person can read in a club) rather than a numbered demo beat.
 
 ## Demo check
 
-Start `pnpm dev`, choose a persona at `/`, then open
+Start `pnpm dev`, sign in at `/` (e.g. `/?account=2` for Sam), then open
 `/org/00000010-0000-4000-8000-000000000002/documents` (Startup Club).
 
 | Persona / action | Expected result on the seeded database |

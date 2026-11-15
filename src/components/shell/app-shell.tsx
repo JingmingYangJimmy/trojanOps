@@ -8,6 +8,7 @@ import { Footer } from './footer';
 import { Masthead } from './masthead';
 import { navigationFor } from './navigation';
 import { ScopeSideNav } from './scope-side-nav';
+import { ShellFrame } from './shell-frame';
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
   const actor = await getActor();
@@ -20,18 +21,17 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
     ? await getDb().select({ kind: orgs.kind }).from(orgs).where(eq(orgs.id, actor.activeOrgId))
     : [];
   const scopes = navigationFor(actor, sessionClubs, activeOrg?.kind === 'usg');
+  // Signed out, the masthead gets no personas: names appear only after someone signs in.
   return (
     <>
-      <a href="#main-content" className="sr-only z-10 rounded-md bg-background px-4 py-2 text-primary focus:not-sr-only focus:absolute focus:left-4 focus:top-2">
-        Skip to content
-      </a>
-      <Masthead key={`${actor.userId}:${actor.activeOrgId}`} scopes={scopes} signedIn={Boolean(actor.userId)}
-        currentUserId={actor.userId} activeOrgId={actor.activeOrgId} demoMode={demoMode}
-        personas={personas} clubs={sessionClubs} />
-      <div className="flex flex-1 flex-col md:flex-row">
-        <ScopeSideNav scopes={scopes} />
-        <main id="main-content" tabIndex={-1} className="mx-auto w-full min-w-0 max-w-[1280px] flex-1 p-6">{children}</main>
-      </div>
+      <ShellFrame
+        masthead={<Masthead key={`${actor.userId}:${actor.activeOrgId}`} scopes={scopes} signedIn={Boolean(actor.userId)}
+          currentUserId={actor.userId} activeOrgId={actor.activeOrgId} demoMode={demoMode}
+          personas={actor.userId ? personas : []} clubs={sessionClubs} />}
+        sideNav={<ScopeSideNav scopes={scopes} />}
+      >
+        {children}
+      </ShellFrame>
       <Footer />
     </>
   );

@@ -172,7 +172,9 @@ Windows 上不需要 bash：`pnpm check` 是 Node 脚本（需要 Node 20.12 或
 
 应用以 `trojanops_app` 角色连接数据库，行级安全对它生效。`DATABASE_OWNER_URL` 只给 `pnpm db:reset` 用。
 
-身份切换在 WP-3 完成。在那之前，没有选人物的请求一律按 Sam（Startup Club 主席）处理；要换成别的人物，把 `trojanops_persona` cookie 设成 `db/seed/ids.ts` 里对应的用户 id。
+`DEMO_MODE=1` 时，`/` 是演示登录页。登录 ID 填种子账号的演示邮箱（如 `sam@demo.trojanops.test`）或 NetID（`sam`），密码统一是 `fighton`。登录后按角色进入不同页面：USG 管理员进 `/usg/integrations`，社长进社团首页，其他成员进 `/me/agents`，没有社团的学生进 `/directory`。
+
+演示时用 `/?account=N` 直接预填第 N 个账号，点 Sign in 即可：1 avery（USG 管理员）、2 sam（Startup 社长）、3 taylor（Startup 财务）、4 jordan、5 casey（Startup 成员）、6 lee（无社团）、7 morgan（Archery 财务 + Startup 成员）、8 riley（USG 审核员）。已登录时也可以用这个链接直接换人。
 
 ## 开始工作
 

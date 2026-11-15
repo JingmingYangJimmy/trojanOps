@@ -24,7 +24,7 @@ until then.
 | my agents | 我的智能体 | agents a student's clubs expose to them, `/me/agents` |
 | audience | 受众 | who may use an agent: All students / All members / named positions |
 | max tier | 可读上限 | highest document tier an agent may read: Public / Members / Officers / USG internal |
-| persona | 演示人物 | a demo identity chosen in the persona switcher |
+| persona | 演示人物 | a demo identity, signed in at `/` or switched in the masthead |
 | platform gateway | 网关 | our server module; not the same thing as USC's Trojan AI Gateway |
 
 Demo beats (each runs on real platform logic; agents answer through the mock runtime):
@@ -102,7 +102,7 @@ production deploy.
 DATABASE_URL=postgres://trojanops_app:app@localhost:5432/trojanops         # app role, RLS applies
 DATABASE_OWNER_URL=postgres://postgres:postgres@localhost:5432/trojanops   # migrate and seed CLI only
 SESSION_SECRET=change-me
-DEMO_MODE=1                       # persona switcher, inspector extras, /demo
+DEMO_MODE=1                       # demo sign-in, persona switcher, inspector extras, /demo
 DEMO_NOW=2026-11-15T10:00:00-08:00
 AGENT_RUNTIME=mock                # mock | real (WP-13); read at startup
 CONNECTOR_IDENTITY=persona        # persona | netid
@@ -733,7 +733,7 @@ Pages (18):
 
 | Page | Stream |
 |---|---|
-| `/` persona switcher | A |
+| `/` demo sign-in (sign-in ID + demo password; `/?account=N` prefills account N); signed in → the role's landing page | A |
 | `/org/[orgId]` club home: my agents in this club, recent documents, my usage this month | B |
 | `/org/[orgId]/catalog` | B |
 | `/org/[orgId]/admin`: members, positions, transfer, quotas, installations, club agents | B |
@@ -806,8 +806,8 @@ WP-14.
   role, RLS, the `read_grants` trigger and `agent_runs_meta` migrated; every stub due by H3 merged.
 - **WP-1** · A · H2–5 · WP-0 · `src/lib/db/**`, `db/migrations/**`, `tests/rls.test.ts` ·
   `withActor` and the RLS migration proven: the §10 contract passes as `trojanops_app`.
-- **WP-3** · A · H5–7 · WP-1 · `src/lib/{identity,authz}/**`, `src/app/{page.tsx,persona-picker.tsx}`,
-  `src/app/api/session/**`, `tests/grants.test.ts` · persona identity, active org, `grantsFor`,
+- **WP-3** · A · H5–7 · WP-1 · `src/lib/{identity,authz}/**`, `src/app/{page.tsx,sign-in-form.tsx}`,
+  `src/app/api/session/**`, `tests/{grants,sign-in}.test.ts` · persona identity and the demo sign-in, active org, `grantsFor`,
   `capGrants`; Morgan and public-cap tests.
 - **WP-4** · A · H7–11 · WP-3, B `effectiveAgent`/`canUse`, C `listAccessibleDocuments` ·
   `src/lib/{gateway,runtime}/**`, `src/app/api/{agents,pending-actions,quota,audit}/**`,
