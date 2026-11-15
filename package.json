@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@12.18.0",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,6 +13,7 @@
     "db:up": "docker compose up -d db",
     "db:generate": "drizzle-kit generate",
     "db:reset": "tsx --env-file-if-exists=.env scripts/db-reset.ts",
+    "db:init": "tsx --env-file-if-exists=.env scripts/db-init.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

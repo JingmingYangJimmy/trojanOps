@@ -67,7 +67,7 @@ export function parseRosterCsv(text: string): RosterRow[] {
 
 export const csvRoster: RosterSource = {
   async fetch() {
-    // TODO(verify): reads db/seed/roster.csv from process.cwd(); breaks in a bundled deploy.
+    // next.config.ts explicitly includes this server-only asset in deployment traces.
     return parseRosterCsv(await readFile(path.join(process.cwd(), 'db', 'seed', 'roster.csv'), 'utf8'));
   },
 };
