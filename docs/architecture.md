@@ -419,7 +419,8 @@ export type AuditAction =
   | 'template.publish' | 'template.distribute' | 'template.retire'
   | 'installation.update' | 'installation.rejected' | 'agent.publish_public'
   | 'org.provision' | 'roster.import' | 'connector.sync' | 'position.transfer'
-  | 'rule_pack.publish' | 'document.upload';
+  | 'rule_pack.publish' | 'document.upload'
+  | 'member.add' | 'member.remove' | 'position.create' | 'position.assign' | 'position.unassign';
 
 export interface AuditEvent {
   actorUserId: string | null;
@@ -722,6 +723,7 @@ UI copy for `quota_exceeded`, by scope:
 - `installation.update`, `installation.rejected`, `agent.publish_public`
 - `org.provision`, `roster.import`, `connector.sync`, `position.transfer`
 - `rule_pack.publish`, `document.upload`
+- `member.add`, `member.remove`, `position.create`, `position.assign`, `position.unassign`
 
 USG admins see all metadata; presidents see their club. Document ids resolve to titles under the
 viewer's RLS; unreadable ones render as "Restricted document".
@@ -741,6 +743,13 @@ viewer's RLS; unreadable ones render as "Restricted document".
   in existing clubs.
 - **`transferPosition(actor, orgId, slug, toUserId)`:** end the old membership row and insert the new one
   (`source = 'manual'`) in one transaction. `audit('position.transfer')`.
+- **Roster edits by the president** (`lifecycle/members.ts`): add an existing user (default the
+  club's `member` position), remove a member (end every active membership), create a position (slug
+  from the name, unique per club), assign or unassign a position. Each is a `manual` membership change
+  in one transaction under the club lock, re-checking the presidency, and audited (`member.add`,
+  `member.remove`, `position.create`, `position.assign`, `position.unassign`). `roster_state` is not
+  touched, so the precedence rule above keeps them. The club's only president can't be removed or
+  lose the presidency; a member's last position is removed with Remove, not unassign.
 - **Cohorts** are seeded; editing them is P1.
 - **Inactive clubs:** installations disabled; documents and audit kept.
 
@@ -766,6 +775,9 @@ Every handler: `const actor = await getActor(req)` → one service call → JSON
 | POST `/api/usg/rule-packs/:slug/versions` | `rules.publish` (unused by the UI) | USG admin | B |
 | POST `/api/orgs/:orgId/documents/:documentId/versions` | `documents.publishDocumentVersion` | president, USG admin (USG) | C |
 | POST `/api/orgs/:orgId/positions/:slug/transfer` | `lifecycle.transferPosition` | president | B |
+| POST `/api/orgs/:orgId/members` body `{ userId \| netId, positionSlug? }`, DELETE `/api/orgs/:orgId/members/:userId` | `lifecycle.addMember`, `removeMember` | president | B |
+| POST `/api/orgs/:orgId/positions` body `{ name, isOfficer }` | `lifecycle.createPosition` | president | B |
+| POST `/api/orgs/:orgId/positions/:slug/holders` body `{ userId }`, DELETE `/api/orgs/:orgId/positions/:slug/holders/:userId` | `lifecycle.assignPosition`, `unassignPosition` | president | B |
 | GET/POST `/api/orgs/:orgId/documents` | `documents.library` | members (read via RLS), president or USG admin for USG (upload) | C |
 | GET `/api/orgs/:orgId/preview?installation=` | `documents.previewAccess` | president | C |
 | POST `/api/usg/connectors/roster/sync` | `lifecycle.importRoster` | USG admin | D |
@@ -778,7 +790,7 @@ Pages (25):
 | `/` demo sign-in (sign-in ID + demo password; `/?account=N` prefills account N); signed in → `/me/agents` | A |
 | `/org/[orgId]` club home: my agents in this club, recent documents, my usage this month | B |
 | `/org/[orgId]/catalog` | B |
-| `/org/[orgId]/admin`: members, positions, transfer, quotas, installations, club agents | B |
+| `/org/[orgId]/admin`: members (add, remove, edit positions), positions (create, transfer), quotas, agents on/off, club agents | B |
 | `/usg/templates` | B |
 | `/usg/templates/[templateId]`: versions, distribution, target | B |
 | `/usg/clubs`: quotas, club policy | B |

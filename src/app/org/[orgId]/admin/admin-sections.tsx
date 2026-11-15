@@ -8,6 +8,7 @@ import { audienceLabel, distributionLabels, statusLabels } from '../catalog/cata
 import { chip, clubBudget, panel, row } from './admin-view';
 import { creditLabel } from '@/lib/gateway/prices';
 import { ModelControl } from './model-control';
+import { AgentSwitch } from './agent-switch';
 import { CreateClubAgent } from './create-agent';
 import { SuccessNotice } from '@/app/usg/templates/console-ui';
 
@@ -120,6 +121,7 @@ export function ClubAgents({ data, justCreated = false }: { data: ClubAdmin; jus
                 {statusLabels[agent.status]}
               </span>
               <p className="w-[56px] font-mono text-xs">v{agent.templateVersion}</p>
+              <AgentSwitch agent={agent} orgId={data.org.id} />
               <ModelControl agent={agent} orgId={data.org.id} />
               <Link
                 href={`/org/${data.org.id}/catalog`}

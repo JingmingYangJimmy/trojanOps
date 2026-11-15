@@ -38,6 +38,8 @@ export interface ClubAdmin {
   /** Ordered officers first, then the rest, so the page lists the ones a transfer concerns. */
   positions: ClubPosition[];
   members: ClubMember[];
+  /** Students who are not members today, for Add member: name and NetID only. */
+  nonMembers: Array<{ userId: string; displayName: string; netId: string }>;
   agents: CatalogEntry[];
 }
 
@@ -107,6 +109,9 @@ export async function clubAdmin(actor: Actor, orgId: string): Promise<ClubAdmin 
       }))
       .sort((a, b) => Number(b.isOfficer) - Number(a.isOfficer) || a.name.localeCompare(b.name)),
     members: members.sort((a, b) => a.displayName.localeCompare(b.displayName)),
+    nonMembers: everyone
+      .filter((person) => !person.held.some((m) => m.orgId === orgId))
+      .map(({ userId, displayName, netId }) => ({ userId, displayName, netId })),
     agents: library?.agents ?? [],
   };
 }

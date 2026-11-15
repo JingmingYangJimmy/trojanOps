@@ -28,6 +28,11 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   'position.transfer': 'Position transferred',
   'rule_pack.publish': 'Rule pack published',
   'document.upload': 'Document uploaded',
+  'member.add': 'Member added',
+  'member.remove': 'Member removed',
+  'position.create': 'Position created',
+  'position.assign': 'Position assigned',
+  'position.unassign': 'Position unassigned',
 };
 
 export interface AuditRow {

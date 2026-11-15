@@ -10,6 +10,7 @@ import type { ClubAdmin, ClubMember } from '@/lib/distribution';
 import { DataTable } from '../documents/data-table';
 import { chip, memberBudget } from './admin-view';
 import { BudgetButton } from './budget-dialog';
+import { AddMemberButton, MemberMenu } from './roster-actions';
 import { creditLabel } from '@/lib/gateway/prices';
 
 const features = tableFeatures({});
@@ -94,6 +95,7 @@ export function MembersTable({ data }: { data: ClubAdmin }) {
       cell: ({ row }) => (
         <div className="flex items-center justify-end gap-3">
           <BudgetButton data={data} member={row.original} onSaved={setSaved} />
+          <MemberMenu data={data} member={row.original} onDone={setSaved} />
         </div>
       ),
     }),
@@ -105,7 +107,10 @@ export function MembersTable({ data }: { data: ClubAdmin }) {
 
   return (
     <div className="space-y-3">
-      <p role="status" className="text-muted-foreground">{saved ?? ''}</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p role="status" className="text-muted-foreground">{saved ?? ''}</p>
+        <AddMemberButton data={data} onDone={setSaved} />
+      </div>
       <DataTable
         table={table}
         caption={`Members of ${data.org.name} and their monthly limits, by name`}

@@ -71,6 +71,7 @@ const club = (patch: Partial<ClubAdmin> = {}): ClubAdmin => ({
     { userId: 'u-jordan', displayName: 'Jordan Reyes' },
   ] })],
   members: [jordan, member()],
+  nonMembers: [],
   agents: [agent()],
   ...patch,
 });

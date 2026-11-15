@@ -10,12 +10,14 @@ import type { ClubAdmin } from '@/lib/distribution';
 import { DataTable } from '../documents/data-table';
 import { chip, holderLabel, transferState, transferUnavailable, type PositionRow } from './admin-view';
 import { TransferButton } from './transfer-dialog';
+import { CreatePositionButton } from './roster-actions';
 
 const features = tableFeatures({});
 const column = createColumnHelper<typeof features, PositionRow>();
 
 export function PositionsTable({ data, rows }: { data: ClubAdmin; rows: PositionRow[] }) {
   const [transferred, setTransferred] = useState<string | null>(null);
+  const [created, setCreated] = useState<string | null>(null);
 
   const columns = column.columns([
     column.display({
@@ -56,7 +58,7 @@ export function PositionsTable({ data, rows }: { data: ClubAdmin; rows: Position
                 data={data}
                 position={row.original.position}
                 candidates={row.original.candidates}
-                onTransferred={setTransferred}
+                onTransferred={(message) => { setCreated(null); setTransferred(message); }}
               />
             ) : (
               <span className="text-muted-foreground">{transferUnavailable[state]}</span>
@@ -71,9 +73,12 @@ export function PositionsTable({ data, rows }: { data: ClubAdmin; rows: Position
 
   return (
     <div className="space-y-3">
-      <p role="status" className="text-muted-foreground">
-        {transferred ? `${transferred} The agents that position opens changed hands with it.` : ''}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p role="status" className="text-muted-foreground">
+          {created ?? (transferred ? `${transferred} The agents that position opens changed hands with it.` : '')}
+        </p>
+        <CreatePositionButton data={data} onDone={(message) => { setTransferred(null); setCreated(message); }} />
+      </div>
       <DataTable
         table={table}
         caption={`Positions in ${data.org.name}, officers first`}
