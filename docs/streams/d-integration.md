@@ -90,20 +90,32 @@ Say "mock runtime" and keep the Mock labels visible. If a real agent misbehaves,
 
 - **A:** `AppError` has no server-error code, so a failed roster audit (which rolls the sync back) surfaces as `invalid` (400).
 
-## Roster preview and demo summary
+## Connector CSV views and demo summaries
 
-`/usg/integrations` opens with a full-width, read-only roster CSV preview instead of per-connector
-detail panels. The table shows club, person and position after the existing server-side USG-admin
-authorization check. The **AI summary** is visibly marked **Demo**: it uses a local text template
-and current CSV counts, without calling a model. People are counted by source identity and clubs
-by source slug, so multiple positions and identical display names do not distort the totals.
-Source identifiers are stripped before the preview reaches the client.
+The Integrations overview retains all five connector rows, each with **View details** linking to
+`/usg/integrations?connector=<kind>`. The existing page handles the selection after USG-admin
+authorization. Each selection renders a full-page CSV projection and its own **AI summary · Demo**;
+the summary uses local text and current counts, not a model call. Back returns to the overview.
 
-This is a source snapshot, not current database memberships or a prediction of sync changes.
-Previewing makes no roster changes; **Sync roster** remains a separate explicit action with its
-existing results and error handling. The five platform-wide connector statuses remain below the
-preview. No connector configuration, application approval or all-user model usage view is added.
+The datasets are actual current platform data, not fabricated CSV fixtures:
 
-`tests/roster-preview.test.ts` verifies the real CSV counts, identity-based counting and display-only
-projection, and empty-source handling. A source read failure suppresses the summary and displays
-the preview error while preserving the sync action and connector table.
+- Identity: the identity service's accounts and active organization/position memberships.
+- Roster: `RosterSource.fetch()` reads the current `db/seed/roster.csv`; source identifiers are
+  stripped, and counts distinguish people from multiple position rows.
+- Documents: C's document-library service recomputes grants and enforces RLS for each library.
+  Only readable metadata is projected, deduplicated across libraries; no document bodies are read.
+- Language model: the current model connector plus the latest 200 rows of `agent_runs_meta`,
+  selecting only person, billed club, recorded model, status, cost and timestamp. Run input/output
+  and document references are never selected. Mock records are identified as demo activity.
+- Applications: actual references from the internal submission queue in the current server
+  process, excluding arbitrary application payloads. This queue is not durable; no submissions
+  means an empty table. Run-page confirmation still does not invoke a submission executor.
+
+`loadConnectorPreview` independently checks USG-admin authorization before reading any dataset.
+A failed source produces an error for that selection without exposing internal error details.
+Previewing never imports or changes records. **Sync roster** and its pending/error/result feedback
+remain separate actions on the overview; no new API route, contract or schema is introduced.
+
+`tests/connector-preview.test.ts` covers query selection, authorization, actual current accounts,
+roster failure isolation, RLS-filtered document metadata, private run-content exclusion and
+submission-reference projection. `tests/roster-preview.test.ts` covers accurate source counts.

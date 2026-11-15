@@ -1,14 +1,18 @@
 import { LockKeyhole } from 'lucide-react';
+import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/shell';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AppError } from '@/lib/contracts';
-import { getConnectors, listConnectors } from '@/lib/connectors/registry';
+import { listConnectors } from '@/lib/connectors/registry';
 import { getActor } from '@/lib/identity';
 import { requireRosterAdmin } from '@/lib/lifecycle/import';
 import { IntegrationPanel } from './integration-panel';
-import { buildRosterPreview, type RosterPreview } from '@/lib/connectors/roster/preview';
+import { connectorKind, loadConnectorPreview } from '@/lib/connectors/preview';
+import { ConnectorPreviewPanel } from './connector-preview';
 
-export default async function IntegrationsPage() {
+export default async function IntegrationsPage({ searchParams }: {
+  searchParams: Promise<{ connector?: string | string[] }>;
+}) {
   const actor = await getActor();
   try {
     await requireRosterAdmin(actor);
@@ -26,20 +30,17 @@ export default async function IntegrationsPage() {
       </Alert>
     </>;
   }
-  const connectors = await listConnectors();
-  let rosterPreview: RosterPreview;
-  try {
-    // Authorize first. Preview only display fields from the source; never send external user IDs.
-    const rows = await getConnectors().roster.fetch();
-    rosterPreview = buildRosterPreview(rows);
-  } catch {
-    // A source preview failure must not hide connector status or the existing Sync roster action.
-    rosterPreview = { status: 'unavailable' };
+  const { connector } = await searchParams;
+  if (connector !== undefined) {
+    const kind = connectorKind(connector);
+    if (!kind) notFound();
+    return <ConnectorPreviewPanel preview={await loadConnectorPreview(actor, kind)} />;
   }
+  const connectors = await listConnectors();
   return <>
-    <PageHeader title="Integrations" description="Preview the roster CSV and its demo summary before syncing club memberships." />
+    <PageHeader title="Integrations" description="Open each connector’s current data as a CSV table with a demo summary." />
     <IntegrationPanel key={`${actor.userId}:${actor.activeOrgId}`} connectors={connectors.map((connector) => ({
       ...connector, lastSyncAt: connector.lastSyncAt?.toISOString() ?? null,
-    }))} rosterPreview={rosterPreview} />
+    }))} />
   </>;
 }
