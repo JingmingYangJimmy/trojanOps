@@ -769,7 +769,7 @@ Pages (25):
 
 | Page | Stream |
 |---|---|
-| `/` demo sign-in (sign-in ID + demo password; `/?account=N` prefills account N); signed in → the role's landing page | A |
+| `/` demo sign-in (sign-in ID + demo password; `/?account=N` prefills account N); signed in → `/me/agents` | A |
 | `/org/[orgId]` club home: my agents in this club, recent documents, my usage this month | B |
 | `/org/[orgId]/catalog` | B |
 | `/org/[orgId]/admin`: members, positions, transfer, quotas, installations, club agents | B |

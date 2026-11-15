@@ -1,15 +1,14 @@
-// Owner: A (WP-3). Demo sign-in: account numbering, sign-in matching and the landing page per role.
+// Owner: A (WP-3). Demo sign-in: account numbering, sign-in matching and the landing page.
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import Home from '@/app/page';
 import { SignInForm } from '@/app/sign-in-form';
-import type { ActiveMembership } from '@/lib/authz';
 import { landingPath, listDemoAccounts, PERSONA_COOKIE } from '@/lib/identity';
 import {
   accountFromParam, DEMO_ACCOUNT_ORDER, DEMO_PASSWORD, matchAccount, type DemoAccount,
 } from '@/lib/identity/demo-accounts';
-import { ORG, USER } from '@db/seed/ids';
+import { USER } from '@db/seed/ids';
 import { appSql, closeAppDb } from './db';
 
 // The page reads the persona cookie through next/headers and leaves through redirect().
@@ -22,32 +21,14 @@ vi.mock('next/navigation', () => ({
   },
 }));
 
-const S = ORG.startup;
-const A = ORG.archery;
-const U = ORG.usg;
-
-const m = (orgId: string, orgKind: 'usg' | 'rso', positionSlug: string): ActiveMembership =>
-  ({ orgId, orgName: orgId, orgKind, positionSlug, positionName: positionSlug });
-
 const fixture: DemoAccount[] = [
-  { n: 1, userId: USER.avery, netId: 'avery', signInId: 'avery@demo.trojanops.test', landing: '/usg/integrations' },
-  { n: 2, userId: USER.sam, netId: 'sam', signInId: 'sam@demo.trojanops.test', landing: `/org/${S}` },
+  { n: 1, userId: USER.avery, netId: 'avery', signInId: 'avery@demo.trojanops.test', landing: '/me/agents' },
+  { n: 2, userId: USER.sam, netId: 'sam', signInId: 'sam@demo.trojanops.test', landing: '/me/agents' },
 ];
 
 describe('landingPath', () => {
-  it('sends each role to its own view', () => {
-    expect(landingPath([m(U, 'usg', 'admin')], null)).toBe('/usg/integrations');
-    expect(landingPath([m(U, 'usg', 'reviewer')], null)).toBe('/me/agents');
-    expect(landingPath([m(S, 'rso', 'president')], null)).toBe(`/org/${S}`);
-    expect(landingPath([m(S, 'rso', 'member'), m(S, 'rso', 'treasurer')], null)).toBe('/me/agents');
-    expect(landingPath([], null)).toBe('/directory');
-  });
-
-  it('uses the active org, and falls back to the first club for one the user does not hold', () => {
-    const held = [m(A, 'rso', 'treasurer'), m(S, 'rso', 'president')];
-    expect(landingPath(held, S)).toBe(`/org/${S}`);
-    expect(landingPath(held, A)).toBe('/me/agents');
-    expect(landingPath(held, ORG.dance)).toBe('/me/agents');
+  it('sends every signed-in user to My agents', () => {
+    expect(landingPath()).toBe('/me/agents');
   });
 });
 
@@ -117,15 +98,10 @@ describe.skipIf(!probe)('listDemoAccounts (seed)', () => {
     for (const a of accounts) expect(Object.keys(a).sort()).toEqual(['landing', 'n', 'netId', 'signInId', 'userId']);
   });
 
-  it('lands each seeded persona on the view for their role', async () => {
-    const landing = Object.fromEntries((await listDemoAccounts()).map((a) => [a.userId, a.landing]));
-    expect(landing[USER.avery]).toBe('/usg/integrations');
-    expect(landing[USER.riley]).toBe('/me/agents');
-    expect(landing[USER.sam]).toBe(`/org/${ORG.hacksc}`);
-    expect(landing[USER.taylor]).toBe('/me/agents');
-    expect(landing[USER.casey]).toBe('/me/agents');
-    expect(landing[USER.morgan]).toBe('/me/agents');
-    expect(landing[USER.lee]).toBe('/directory');
+  it('lands each seeded persona on My agents', async () => {
+    const accounts = await listDemoAccounts();
+    expect(accounts.length).toBeGreaterThan(0);
+    for (const a of accounts) expect(a.landing).toBe('/me/agents');
   });
 });
 
@@ -140,12 +116,12 @@ describe.skipIf(!probe)('the / page', () => {
     process.env.DEMO_MODE = demoMode;
   });
 
-  it('sends a signed-in visit without ?account= to the landing page', async () => {
+  it('sends a signed-in visit without ?account= to My agents', async () => {
     process.env.DEMO_MODE = '1';
     signInAs(USER.sam);
-    await expect(render({})).rejects.toMatchObject({ path: `/org/${ORG.hacksc}` });
+    await expect(render({})).rejects.toMatchObject({ path: '/me/agents' });
     signInAs(USER.lee);
-    await expect(render({})).rejects.toMatchObject({ path: '/directory' });
+    await expect(render({})).rejects.toMatchObject({ path: '/me/agents' });
   });
 
   it('shows the sign-in form for ?account=N even when signed in, prefilled for account N', async () => {

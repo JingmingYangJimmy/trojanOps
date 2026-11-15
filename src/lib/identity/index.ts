@@ -64,18 +64,11 @@ export async function listPersonas(): Promise<Persona[]> {
 }
 
 /**
- * The page a user lands on for their active org: a USG admin on the USG admin pages, a club
- * president on the club home, any other member on My agents, a user with no club on the Directory.
- * Navigation only: every page still authorizes its own reads.
+ * The page every signed-in user lands on: My agents. Navigation only: every page still authorizes
+ * its own reads.
  */
-export function landingPath(held: ActiveMembership[], activeOrgId: string | null): string {
-  const orgId = resolveActiveOrg(held, activeOrgId);
-  const inOrg = held.filter((m) => m.orgId === orgId);
-  if (!orgId || inOrg.length === 0) return '/directory';
-  const slugs = inOrg.map((m) => m.positionSlug);
-  // TODO(verify): land USG admins on /usg/templates once stream B ships that page.
-  if (inOrg[0].orgKind === 'usg') return slugs.includes('admin') ? '/usg/integrations' : '/me/agents';
-  return slugs.includes('president') ? `/org/${orgId}` : '/me/agents';
+export function landingPath(): string {
+  return '/me/agents';
 }
 
 /** Every user as a demo sign-in account: the seeded accounts first in DEMO_ACCOUNT_ORDER, then any
@@ -93,7 +86,7 @@ export async function listDemoAccounts(): Promise<DemoAccount[]> {
     userId: u.userId,
     netId: u.netId,
     signInId: u.demoEmail ?? u.netId,
-    landing: landingPath(u.held, null),
+    landing: landingPath(),
   }));
 }
 

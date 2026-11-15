@@ -1,9 +1,8 @@
 // Owner: A (WP-3). Landing page: the DEMO_MODE sign-in. A signed-in visit without `?account=` goes
-// to the user's landing page; `/?account=N` always shows the form, prefilled for account N.
+// to My agents; `/?account=N` always shows the form, prefilled for account N.
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { PageHeader } from '@/components/shell';
-import { activeMemberships } from '@/lib/authz';
 import { getActor, landingPath, listDemoAccounts } from '@/lib/identity';
 import { accountFromParam } from '@/lib/identity/demo-accounts';
 import { personasEnabled } from '@/lib/identity/session';
@@ -19,10 +18,7 @@ export default async function Home({
   const { account } = await searchParams;
   if (account === undefined) {
     const actor = await getActor();
-    if (actor.userId) {
-      const held = (await activeMemberships(actor.userId)) ?? [];
-      redirect(landingPath(held, actor.activeOrgId));
-    }
+    if (actor.userId) redirect(landingPath());
   }
   if (!personasEnabled()) {
     return (
