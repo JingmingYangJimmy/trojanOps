@@ -106,7 +106,7 @@ async function toRows(viewer: Actor, entries: AuditEntry[]): Promise<AuditRow[]>
   const orgIds = uuids([
     ...entries.map((e) => e.actingOrgId), ...ofType('org'), ...[...agents.values()].map((a) => a.orgId),
   ]);
-  const userIds = uuids(entries.map((e) => e.actorUserId));
+  const userIds = uuids([...entries.map((e) => e.actorUserId), ...ofType('user')]);
   const templateIds = uuids(ofType('template'));
   const positionIds = uuids(ofType('position'));
   const rulePackSlugs = [...new Set(ofType('rule_pack'))];
@@ -146,6 +146,8 @@ async function toRows(viewer: Actor, entries: AuditEntry[]): Promise<AuditRow[]>
         return t(orgNames.get(e.targetId) ?? 'Unknown club');
       case 'position':
         return t(positionNames.get(e.targetId) ?? 'Unknown position');
+      case 'user':
+        return t(userNames.get(e.targetId) ?? 'Unknown user');
       case 'template':
         return t(templateNames.get(e.targetId) ?? 'Unknown template');
       case 'rule_pack': {
