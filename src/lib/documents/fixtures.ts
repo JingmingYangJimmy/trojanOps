@@ -25,7 +25,7 @@ export function startersFor(slug: string): string[] {
   return Object.hasOwn(STARTERS, base) ? STARTERS[base] : [];
 }
 
-export const DEMO_INDEX = { label: 'Demo index', maxChunkChars: 800, minIndexableChars: 40, queuedMs: 3000, msPerChunk: 2000 } as const;
+export const DEMO_INDEX = { maxChunkChars: 800, minIndexableChars: 40, queuedMs: 3000, msPerChunk: 2000 } as const;
 export interface DemoChunk {
   readonly n: number; readonly heading: string; readonly text: string;
   readonly start: number; readonly chars: number; readonly tokens: number;

@@ -17,7 +17,7 @@ export function indexStatusLabel(status: IndexStatus): string {
 
 export function IndexStatusBadge({ status, name }: { readonly status: IndexStatus; readonly name?: string }) {
   const Icon = status.state === 'ready' ? Check : status.state === 'error' ? AlertCircle : Clock;
-  return <span role="status" aria-live="polite" aria-label={name ? `${name}: ${indexStatusLabel(status)}` : undefined} title={status.state === 'error' ? status.fix : 'Demo index, not a live retrieval index'} className={`inline-flex items-center gap-1 text-sm ${status.state === 'ready' ? 'text-success' : status.state === 'error' ? 'text-primary' : 'text-muted-foreground'}`}><Icon aria-hidden className="size-4 shrink-0" />{indexStatusLabel(status)}</span>;
+  return <span role="status" aria-live="polite" aria-label={name ? `${name}: ${indexStatusLabel(status)}` : undefined} title={status.state === 'error' ? status.fix : undefined} className={`inline-flex items-center gap-1 text-sm ${status.state === 'ready' ? 'text-success' : status.state === 'error' ? 'text-primary' : 'text-muted-foreground'}`}><Icon aria-hidden className="size-4 shrink-0" />{indexStatusLabel(status)}</span>;
 }
 
 function ActiveRefresh() {

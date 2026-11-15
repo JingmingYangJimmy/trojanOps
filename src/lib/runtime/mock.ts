@@ -29,7 +29,7 @@ export const mockRuntime: AgentRuntime = {
 const answer: AgentRuntime['run'] = async (agent, _actor, input, { accessibleDocuments: docs }) => {
   const usage = { model: `demo-${agent.modelClass}`, inputTokens: 0, outputTokens: 0, costMicro: priceMicro(agent.modelClass) };
   if (agent.settings?.searchKnowledge === false) {
-    return { reply: "**Placeholder answer.** The demo runtime doesn't call a model.\n\nThis agent answers without reading club documents.", citations: [], proposedActions: [], usage };
+    return { reply: 'This agent answers without reading club documents.', citations: [], proposedActions: [], usage };
   }
   const financeRequest = /finance|financial|budget|expenses|sponsor/i.test(input);
   const handoffCase = agent.templateSlug === 'hacksc-handoff' || agent.templateSlug === 'handoff'
@@ -38,8 +38,8 @@ const answer: AgentRuntime['run'] = async (agent, _actor, input, { accessibleDoc
     const financeDocs = docs.filter((doc) => /finance|financial|budget|expenses|sponsor/i.test(doc.title));
     if (financeDocs.length === 0) return { ...mockHandoff(input, []), proposedActions: [], usage };
     return {
-      reply: ['**Demo answer · Mock runtime, no model call.**', ...financeDocs.map((doc, index) =>
-        `### ${titled(doc)}\n\n${doc.bodyMd}\n\n[${index + 1}]`)].join('\n\n'),
+      reply: financeDocs.map((doc, index) =>
+        `### ${titled(doc)}\n\n${doc.bodyMd}\n\n[${index + 1}]`).join('\n\n'),
       citations: financeDocs.map((doc) => ({ documentId: doc.id, quote: doc.bodyMd })),
       proposedActions: agent.tools.includes('submit_to_queue') && /\bsubmit\b/i.test(input) ? [{ tool: 'submit_to_queue', args: {} }] : [],
       usage,
@@ -53,7 +53,6 @@ const answer: AgentRuntime['run'] = async (agent, _actor, input, { accessibleDoc
   }
   const cited = docs.slice(0, 3);
   const lines = [
-    "**Placeholder answer.** The demo runtime doesn't call a model.",
     cited.length ? `Here is the first sentence of each ${agent.settings?.citeSources === false ? '' : 'cited '}document this run could read:` : 'This run has no permitted documents to cite.',
     ...cited.map((d, i) => `${i + 1}. **${titled(d)}:** ${firstSentence(d.bodyMd)} [${i + 1}]`),
   ];

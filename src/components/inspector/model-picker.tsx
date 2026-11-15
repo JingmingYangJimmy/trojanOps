@@ -15,13 +15,13 @@ export interface ModelPickerProps {
   readonly onChange: (id: ModelId) => void;
   /** A line under the choices, such as why the list is short. */
   readonly note?: string | null;
-  /** Accessible name prefix, e.g. "Demo model" in chat or "Default model" in the builder. */
+  /** Accessible name prefix, e.g. "Model" in chat or "Default model" in the builder. */
   readonly label?: string;
   readonly disabled?: boolean;
   readonly className?: string;
 }
 
-export function ModelPicker({ choices, value, onChange, note, label = 'Demo model', disabled, className }: ModelPickerProps) {
+export function ModelPicker({ choices, value, onChange, note, label = 'Model', disabled, className }: ModelPickerProps) {
   const selected = choices.find((c) => c.id === value) ?? modelById(value);
   const name = selected?.label ?? value;
   return <DropdownMenu>
@@ -31,7 +31,7 @@ export function ModelPicker({ choices, value, onChange, note, label = 'Demo mode
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="start" className="w-80">
-      <p className="px-2 py-2 text-xs text-muted-foreground">Demo models</p>
+      <p className="px-2 py-2 text-xs text-muted-foreground">Models</p>
       <DropdownMenuRadioGroup value={selected?.id} onValueChange={(id) => { const choice = choices.find((c) => c.id === id); if (choice) onChange(choice.id); }}>
         {choices.map((choice) => <DropdownMenuRadioItem key={choice.id} value={choice.id}>
           <span className="flex-1 font-mono text-xs">{choice.label}</span>

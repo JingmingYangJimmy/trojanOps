@@ -38,7 +38,7 @@ export function DocumentLibrary({ data }: { readonly data: KnowledgeLibrary }) {
   const clear = () => { setQuery(changeFilter(query, { search: '', tier: '' })); setSource(''); setStatus(''); };
   const sources = [...new Map(data.documents.map((d) => [d.sourceId, { id: d.sourceId, name: d.sourceName }])).values()];
   return <div className="space-y-6"><IndexRefresh pending={data.documents.some((d) => d.index.state === 'queued' || d.index.state === 'indexing')} />
-    <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-muted-foreground">Demo index · split at headings · no embeddings</p>{data.canUpload && <UploadForm data={data} />}</div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-muted-foreground">Split at headings</p>{data.canUpload && <UploadForm data={data} />}</div>
     {!data.member && <p className="flex items-start gap-2 rounded-md border border-border bg-muted p-3"><Lock aria-hidden className="mt-0.5 size-4 shrink-0" />Public documents only. Club membership is required to read restricted documents.</p>}
     <section aria-label="Document library"><div className="mb-4 flex flex-wrap items-end gap-3">
       <label className="w-64 max-w-full space-y-1"><span className="block font-semibold">Search documents</span><input type="search" value={query.search} onChange={(e) => setQuery(changeFilter(query, { search: e.target.value }))} className={fieldClass} /></label>

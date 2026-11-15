@@ -28,8 +28,7 @@ const run = (input: string, docs: AccessibleDocument[], config = agent) =>
 describe('grounded demo runtime', () => {
   it('turns accessible handoff records into a labeled lesson and actionable process', async () => {
     const result = await run('I am organizing for the first time. Show the old process, lessons and a new plan.', [minutes, handoff]);
-    expect(result.reply).toContain('Demo');
-    expect(result.reply).toContain('no model call');
+    expect(result.reply).not.toMatch(/Demo answer|mock runtime|placeholder|model call/i);
     expect(result.reply).toContain('Our biggest mistake');
     expect(result.reply).toContain('1. Start the room request six weeks');
     expect(result.reply).toContain('6. At closing');

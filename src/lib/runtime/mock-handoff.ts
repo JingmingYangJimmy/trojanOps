@@ -2,11 +2,9 @@ import type { AccessibleDocument } from '../contracts';
 
 /** Deterministic source excerpts for the handoff case, after gateway RLS filtering. */
 export function mockHandoff(input: string, documents: AccessibleDocument[]) {
-  const label = '**Demo answer · Mock runtime, no model call.**';
-  const disclaimer = `${label} These excerpts come from the permitted scenario documents.`;
   if (/finance|financial|budget|expenses|sponsor/i.test(input)) {
     return {
-      reply: `${label}\n\nSorry, I don’t have permission to access the club’s financial documents, so I can’t share financial information. Ask the president or treasurer for authorized access or an approved summary.`,
+      reply: `Sorry, I don’t have permission to access the club’s financial documents, so I can’t share financial information. Ask the president or treasurer for authorized access or an approved summary.`,
       citations: [],
     };
   }
@@ -30,7 +28,7 @@ export function mockHandoff(input: string, documents: AccessibleDocument[]) {
   });
   const cited = [...new Map(excerpts.map((excerpt) => [excerpt.document.id, excerpt.document])).values()];
   return {
-    reply: [disclaimer, ...excerpts.map((excerpt) =>
+    reply: [...excerpts.map((excerpt) =>
       `### ${excerpt.label}\n\n${excerpt.quote}\n\n[${cited.findIndex((document) => document.id === excerpt.document.id) + 1}]`),
     ...(excerpts.length ? [] : ['No permitted handoff records are available. Ask the club president to add source material.'])].join('\n\n'),
     citations: cited.map((document) => ({ documentId: document.id, quote: excerpts.find((excerpt) => excerpt.document.id === document.id)?.quote ?? '' })),

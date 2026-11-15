@@ -45,7 +45,7 @@ export function IntegrationPanel({ connectors, clubs }: {
 
   return <div className="space-y-6">
     <DemoSummary source="current connector configuration and recorded health">
-      <p>{connectors.length} connectors support the flow from USG to clubs and their members. {connectors.filter(connector => connector.isMock).length} use demo implementations.</p>
+      <p>{connectors.length} connectors support the flow from USG to clubs and their members.</p>
       <p>{unhealthy.length ? `${unhealthy.length} connectors need attention.` : 'No connector is currently marked degraded or down.'}</p>
     </DemoSummary>
     {unhealthy.length > 0 && <Alert variant="attention">
