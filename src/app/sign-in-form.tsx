@@ -57,8 +57,8 @@ export function SignInForm({ accounts, prefill }: Props) {
   const inFlight = useRef(false);
   const idRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
-  const [signInId, setSignInId] = useState(prefill ? DEMO_SIGN_IN_IDS.get(prefill.netId) ?? prefill.signInId : '');
-  const [password, setPassword] = useState(prefill ? DEMO_PASSWORD : '');
+  const [signInId, setSignInId] = useState(prefill ? DEMO_SIGN_IN_IDS.get(prefill.netId) ?? prefill.signInId : 'admin');
+  const [password, setPassword] = useState(DEMO_PASSWORD);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);

@@ -90,6 +90,8 @@ describe('SignInForm markup', () => {
     expect(html).not.toMatch(NAMES);
     expect(html).not.toContain('value="sam@demo.trojanops.test"'); // only the placeholder, no value
     expect(html).toContain('placeholder="e.g., tommy@usc.edu"');
+    expect(html).toMatch(/id="sign-in-id"[^>]*value="admin"/);
+    expect(html).toMatch(/type="password"[^>]*value="fighton"/);
   });
 
   it('prefills the sign-in ID and a masked password for a /?account=N link', () => {
@@ -154,7 +156,8 @@ describe.skipIf(!probe)('the / page', () => {
     signInAs(null);
     const empty = renderToStaticMarkup(await render({ account: '99' }));
     expect(empty).toContain('Please sign in to continue.');
-    expect(empty).not.toMatch(/value="[^"]/);
+    expect(empty).toContain('value="admin"');
+    expect(empty).toContain('value="fighton"');
   });
 
   it('shows no form outside demo mode', async () => {

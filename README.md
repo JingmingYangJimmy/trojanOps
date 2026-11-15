@@ -174,7 +174,7 @@ Windows 上不需要 bash：`pnpm check` 是 Node 脚本（需要 Node 20.12 或
 
 `DEMO_MODE=1` 时，`/` 是演示登录页。登录 ID 可以按角色填写：`admin`、`president`、`treasurer`、`successor`、`member`、`student`、`multi`、`reviewer`，密码统一是 `fighton`。原演示邮箱（如 `sam@demo.trojanops.test`）和 NetID（`sam`）也可使用。登录后按角色进入不同页面：USG 管理员进 `/usg/integrations`，社长进社团首页，其他成员进 `/me/agents`，没有社团的学生进 `/directory`。
 
-演示时用 `/?account=N` 直接预填第 N 个账号，点 Sign in 即可：1 admin（Avery，USG 管理员）、2 president（Sam，Startup 社长）、3 treasurer（Taylor，Startup 财务）、4 successor（Jordan，接任人）、5 member（Casey，Startup 成员）、6 student（Lee，无社团）、7 multi（Morgan，Archery 财务 + Startup 成员）、8 reviewer（Riley，USG 审核员）。已登录时也可以用这个链接直接换人。
+打开登录页默认预填 `admin` / `fighton`。演示时用 `/?account=N` 直接预填第 N 个账号，点 Sign in 即可：1 admin（Avery，USG 管理员）、2 president（Sam，Startup 社长）、3 treasurer（Taylor，Startup 财务）、4 successor（Jordan，接任人）、5 member（Casey，Startup 成员）、6 student（Lee，无社团）、7 multi（Morgan，Archery 财务 + Startup 成员）、8 reviewer（Riley，USG 审核员）。已登录时也可以用这个链接直接换人。
 
 ## 开始工作
 
