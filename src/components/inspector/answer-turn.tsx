@@ -22,15 +22,19 @@ function Citation({ source, n, tier, installationId, orgId, onInspect, compact }
 }) {
   const [access, setAccess] = useState<{ allowed: boolean; reason: string } | null>(null);
   const [open, setOpen] = useState(false);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (hoverTimer.current) clearTimeout(hoverTimer.current); }, []);
+  function keepOpen() { if (hoverTimer.current) clearTimeout(hoverTimer.current); }
+  function leave() { keepOpen(); hoverTimer.current = setTimeout(() => show(false), 200); }
   function show(value: boolean) {
     setOpen(value);
     if (value && installationId) void citationAccess(installationId, source.documentId).then(setAccess, () => setAccess({ allowed: false, reason: 'Could not check access. Close this source and try again.' }));
   }
   const allowed = !installationId || access?.allowed;
-  return <Popover open={open} onOpenChange={show}><PopoverTrigger asChild><button type="button" onFocus={(e) => { if (!open && e.currentTarget.matches(':focus-visible')) show(true); }}
+  return <Popover open={open} onOpenChange={show}><PopoverTrigger asChild><button type="button" onPointerEnter={(e) => { if (e.pointerType === 'mouse') { keepOpen(); show(true); } }} onPointerLeave={(e) => { if (e.pointerType === 'mouse') leave(); }} onFocus={(e) => { if (!open && e.currentTarget.matches(':focus-visible')) show(true); }}
     className="inline-flex min-h-7 items-center gap-1 rounded-sm border border-input px-2 align-baseline text-sm font-semibold hover:bg-accent" aria-label={`Source ${n}: ${source.title}`}>
     {compact ? `[${n}]` : <><FileText aria-hidden className="size-3" />{n} {source.title} · {tierLabels[tier]}</>}
-  </button></PopoverTrigger><PopoverContent align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+  </button></PopoverTrigger><PopoverContent align="start" onPointerEnter={keepOpen} onPointerLeave={leave} onOpenAutoFocus={(e) => e.preventDefault()}>
     <CitationContent n={n} title={source.title} quote={source.quote} tier={tier} allowed={Boolean(allowed)} reason={access?.reason ?? (installationId ? 'Checking current access…' : 'Permitted for this run.')} orgId={orgId} documentId={source.documentId} onInspect={onInspect ? () => { setOpen(false); onInspect(source.documentId); } : undefined} />
   </PopoverContent></Popover>;
 }

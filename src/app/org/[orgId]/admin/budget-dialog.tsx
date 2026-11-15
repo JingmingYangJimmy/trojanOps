@@ -31,6 +31,7 @@ export function BudgetButton({ data, member, onSaved }: {
   const [failure, setFailure] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [confirmZero, setConfirmZero] = useState(false);
+  const liveAmount = parseDollars(amount, data.clubLimitMicro);
   const fieldId = `limit-${member.userId}`;
   const errorId = `${fieldId}-error`;
   const titleId = `${fieldId}-title`;
@@ -133,7 +134,7 @@ export function BudgetButton({ data, member, onSaved }: {
           )}
         </div>
 
-        <p className="mt-2 text-sm text-muted-foreground" aria-live="polite">{'micro' in parseDollars(amount, data.clubLimitMicro) ? (() => { const value = parseDollars(amount, data.clubLimitMicro); return 'micro' in value ? `${amount ? `$${dollars(value.micro)}` : ''} = ${creditLabel(value.micro)}. ` : ''; })() : ''}Up to {data.org.name}&apos;s budget, ${dollars(data.clubLimitMicro)}.</p>
+        <p className="mt-2 text-sm text-muted-foreground" aria-live="polite">{'micro' in liveAmount ? `$${dollars(liveAmount.micro)} = ${creditLabel(liveAmount.micro)}. ` : ''}Up to {data.org.name}&apos;s budget, ${dollars(data.clubLimitMicro)}.</p>
         {confirmZero && <p role="alert" className="mt-4 rounded-md border border-primary p-3">Set {member.displayName}&apos;s allowance to $0.00? Their next run in {data.org.name} will be blocked until you raise it.</p>}
         {failure && (
           <p role="alert" className="mt-4 flex items-start gap-2 rounded-md border border-primary p-3">

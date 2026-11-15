@@ -39,6 +39,7 @@ export function RunWorkspace({ installationId, agentName, demoRuntime, config }:
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [stoppedId, setStoppedId] = useState<string | null>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const [charge, setCharge] = useState<number | null>(null);
   const inFlight = useRef(false);
@@ -46,7 +47,8 @@ export function RunWorkspace({ installationId, agentName, demoRuntime, config }:
   const endRef = useRef<HTMLDivElement>(null);
   const inspectorRef = useRef<HTMLDivElement>(null);
   const chargeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inspector = latestInspector(state);
+  const selected = state.turns.find((turn) => turn.kind === 'agent' && turn.result.runId === selectedRunId);
+  const inspector = selected?.kind === 'agent' ? selected.result.inspector : latestInspector(state);
   const playbackDone = useCallback(() => setPlayingId(null), []);
   useEffect(() => {
     if (!playingId) return;
@@ -78,10 +80,12 @@ export function RunWorkspace({ installationId, agentName, demoRuntime, config }:
       const event = await requestRun(fetch, installationId, text.trim(), "Couldn't get an answer. Check your connection and try again.", model);
       dispatch(event);
       if (event.type === 'succeeded') {
+        setSelectedRunId(event.result.runId); setHighlightedId(null);
         setPlayingId(event.result.runId); setStoppedId(null); setCharge(event.result.inspector.costMicro);
         if (chargeTimer.current) clearTimeout(chargeTimer.current);
         chargeTimer.current = setTimeout(() => setCharge(null), 2000);
-        const left = Object.values(event.result.inspector.quotaRemainingMicro)[0];
+        const balances = Object.values(event.result.inspector.quotaRemainingMicro);
+        const left = balances.length ? Math.min(...balances) : undefined;
         if (left !== undefined) setContext((current) => current ? { ...current, quota: { ...current.quota, remainingMicro: left, spentMicro: Math.max(0, current.quota.limitMicro - left) } } : current);
         setAnnouncement(`${agentName} answered. Read ${event.result.inspector.readInRun.length} documents. ${creditLabel(event.result.inspector.costMicro)} used. ${left === undefined ? '' : `${creditLabel(left)} left.`}`);
       } else if (event.type === 'failed') setAnnouncement(event.error.message);
@@ -103,14 +107,14 @@ export function RunWorkspace({ installationId, agentName, demoRuntime, config }:
   function stop() { setStoppedId(playingId); setPlayingId(null); setAnnouncement('Stopped showing the answer. The run had already finished.'); }
   function reset() {
     if (state.running || playingId) return;
-    dispatch({ type: 'reset' }); setInput(''); setModel(context?.models.defaultClass ?? 'economy'); setStoppedId(null); setInputError(null); setCharge(null); setAnnouncement('New conversation. Earlier messages will not be sent.');
+    dispatch({ type: 'reset' }); setInput(''); setModel(context?.models.defaultClass ?? 'economy'); setStoppedId(null); setSelectedRunId(null); setHighlightedId(null); setInputError(null); setCharge(null); setAnnouncement('New conversation. Earlier messages will not be sent.');
   }
   return <>
     <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">{context && <><span className="rounded-sm border border-border px-2 py-1">{context.audienceLabel}</span><span>Template v{context.templateVersion}</span><span>Paid by {context.scope.billedClub}</span></>}<Button type="button" variant="ghost" className="ml-auto" disabled={state.running || Boolean(playingId)} onClick={reset}>New conversation</Button></div>
     <div className="flex flex-col items-start gap-[24px] lg:flex-row"><section aria-label={`Chat with ${agentName}`} className="flex h-[calc(100dvh-220px)] min-h-[420px] w-full min-w-0 max-w-[720px] flex-1 flex-col rounded-md border border-border bg-background">
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
       {!state.turns.length && context && <section className="mb-6"><h2 className="text-xl font-semibold">What {agentName} can read</h2><p className="mt-2">{context.scope.sentence}</p><p className="mt-2 text-sm text-muted-foreground">{context.scope.sources.join(' · ')}</p><p className="mt-1 text-sm">As {[...new Set(context.scope.grantLabels)].join(', ')}.</p><div className="mt-4 grid gap-2">{context.starters.map((starter) => <button key={starter} type="button" onClick={() => fill(starter)} className="min-h-9 rounded-md border border-border px-3 py-2 text-left hover:bg-accent">{starter}</button>)}</div></section>}
-      {(state.turns.length > 0 || !context) && <Transcript turns={state.turns} actions={state.actions} agentName={agentName} demoRuntime={demoRuntime} installationId={installationId} orgId={context?.orgId} onConfirm={(id) => void confirm(id)} onReject={(id) => void reject(id)} onRetry={(text) => void run(text)} onEdit={fill} playingId={playingId} stoppedId={stoppedId} onPlaybackDone={playbackDone} onAnnounce={setAnnouncement} onInspect={(id) => { setHighlightedId(id); inspectorRef.current?.scrollIntoView({ block: 'nearest' }); inspectorRef.current?.focus(); }} />}
+      {(state.turns.length > 0 || !context) && <Transcript turns={state.turns} actions={state.actions} agentName={agentName} demoRuntime={demoRuntime} installationId={installationId} orgId={context?.orgId} onConfirm={(id) => void confirm(id)} onReject={(id) => void reject(id)} onRetry={(text) => void run(text)} onEdit={fill} playingId={playingId} stoppedId={stoppedId} onPlaybackDone={playbackDone} onAnnounce={setAnnouncement} onInspect={(id, runId) => { setSelectedRunId(runId); setHighlightedId(id || null); inspectorRef.current?.scrollIntoView({ block: 'nearest' }); inspectorRef.current?.focus(); }} />}
       <div ref={endRef} />
       </div>
       <Composer config={context} agentName={agentName} input={input} model={model} running={state.running} playing={Boolean(playingId)} error={inputError} charge={charge} textareaRef={textarea} onInput={(value) => { setInput(value); if (inputError) setInputError(validateInput(value)); }} onModel={setModel} onRun={() => void run(input)} onStop={stop} />

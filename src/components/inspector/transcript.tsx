@@ -14,7 +14,7 @@ export interface TranscriptProps {
   readonly onRetry?: (input: string) => void; readonly onEdit?: (input: string) => void;
   readonly installationId?: string; readonly orgId?: string;
   readonly playingId?: string | null; readonly stoppedId?: string | null;
-  readonly onPlaybackDone?: () => void; readonly onInspect?: (documentId: string) => void;
+  readonly onPlaybackDone?: () => void; readonly onInspect?: (documentId: string, runId: string) => void;
   readonly onAnnounce?: (message: string) => void;
 }
 
@@ -48,7 +48,7 @@ export function Transcript(p: TranscriptProps) {
       case 'agent': {
         const notes = changes(previous, turn.result.inspector);
         return <li key={turn.key} className="mr-auto min-w-0 py-1">{notes.map((note) => <p key={note} className="mb-4 flex items-start gap-2 bg-muted p-3 text-sm"><Info aria-hidden className="mt-0.5 size-4 shrink-0" />{note}</p>)}<AnswerTurn result={turn.result} agentName={p.agentName} demoRuntime={p.demoRuntime} modelClass={turn.modelClass} actions={p.actions} onConfirm={p.onConfirm} onReject={p.onReject}
-          installationId={p.installationId} orgId={p.orgId} playing={p.playingId === turn.result.runId} stopped={p.stoppedId === turn.result.runId} onDone={p.onPlaybackDone} onInspect={p.onInspect} onAnnounce={p.onAnnounce} /></li>;
+          installationId={p.installationId} orgId={p.orgId} playing={p.playingId === turn.result.runId} stopped={p.stoppedId === turn.result.runId} onDone={p.onPlaybackDone} onInspect={p.onInspect ? (id) => p.onInspect?.(id, turn.result.runId) : undefined} onAnnounce={p.onAnnounce} />{p.onInspect && <Button type="button" variant="ghost" onClick={() => p.onInspect?.('', turn.result.runId)}>Show this run in inspector</Button>}</li>;
       }
       default: { const exhaustive: never = turn; return exhaustive; }
     }
