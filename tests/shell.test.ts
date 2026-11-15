@@ -27,6 +27,19 @@ describe('WP-2 app shell', () => {
     expect(scope(actor(null, null, []))).toMatchObject({ href: '/directory', items: undefined });
   });
 
+  it('lists the active club departments under Departments', () => {
+    const departments = [{ slug: 'events', name: 'Events' }, { slug: 'marketing', name: 'Marketing' }];
+    const [parent] = navigationFor(actor(USER.taylor, ORG.startup, ['member']), clubs, false, departments)
+      .find((s) => s.label === 'Directory')!.items!;
+    expect(parent.children?.map((c) => [c.label, c.href])).toEqual([
+      ['Events', '/directory/departments/events'], ['Marketing', '/directory/departments/marketing'],
+    ]);
+    // On a department page the department is highlighted, not the list above it.
+    expect(isNavItemActive('/directory/departments/events', parent)).toBe(false);
+    expect(isNavItemActive('/directory/departments', parent)).toBe(true);
+    expect(isNavItemActive('/directory/departments/events', parent.children![0])).toBe(true);
+  });
+
   it('shows club management links only to the president', () => {
     const member = navigationFor(actor(USER.casey, ORG.startup, ['member']), clubs, false).find((s) => s.match.startsWith('/org/'))!;
     const president = navigationFor(actor(USER.sam, ORG.startup, ['president']), clubs, false).find((s) => s.match.startsWith('/org/'))!;

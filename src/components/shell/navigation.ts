@@ -1,7 +1,7 @@
 // Navigation only: services still authorize every request.
 import type { Actor, MyAgentsClub } from '@/lib/contracts';
 
-export interface NavItem { href: string; label: string; exact?: boolean; activePaths?: readonly string[] }
+export interface NavItem { href: string; label: string; exact?: boolean; activePaths?: readonly string[]; children?: NavItem[] }
 export interface Scope { href: string; label: string; match: string; items?: NavItem[] }
 
 export function matchesPath(pathname: string, path: string): boolean {
@@ -18,13 +18,27 @@ export function isNavItemActive(pathname: string, item: NavItem): boolean {
     || (item.activePaths?.some((path) => matchesPath(pathname, path)) ?? false);
 }
 
-/** `activeOrgIsUsg` is the kind of the actor's active org (read by the shell), not a seed id. */
-export function navigationFor(actor: Actor, clubs: readonly Pick<MyAgentsClub, 'orgId' | 'orgName'>[], activeOrgIsUsg: boolean): Scope[] {
+/**
+ * `activeOrgIsUsg` is the kind of the actor's active org (read by the shell), not a seed id.
+ * `departments` are the active club's departments, listed under Departments in the directory nav.
+ */
+export function navigationFor(
+  actor: Actor,
+  clubs: readonly Pick<MyAgentsClub, 'orgId' | 'orgName'>[],
+  activeOrgIsUsg: boolean,
+  departments: readonly { slug: string; name: string }[] = [],
+): Scope[] {
   // Directory is the org directory: a member acting in a club sees its departments first; USG and
   // students outside a club see the clubs (§14).
   const inClub = Boolean(actor.userId && actor.activeOrgId && !activeOrgIsUsg && actor.positions.length > 0);
   const directoryItems: NavItem[] | undefined = inClub
-    ? [{ href: '/directory/departments', label: 'Departments' }, { href: '/directory/clubs', label: 'All clubs' }]
+    ? [
+      {
+        href: '/directory/departments', label: 'Departments', exact: departments.length > 0,
+        children: departments.map((d) => ({ href: `/directory/departments/${d.slug}`, label: d.name })),
+      },
+      { href: '/directory/clubs', label: 'All clubs' },
+    ]
     : undefined;
   const scopes: Scope[] = [
     { href: '/me/agents', label: 'My agents', match: '/me', items: [{ href: '/me/agents', label: 'My agents' }, { href: '/me/usage', label: 'Usage' }] },

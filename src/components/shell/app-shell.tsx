@@ -3,6 +3,7 @@ import { getDb } from '@/lib/db/client';
 import { orgs } from '@/lib/db/schema';
 import { getActor, listPersonas } from '@/lib/identity';
 import { personasEnabled } from '@/lib/identity/session';
+import { clubContent } from '@/lib/directory/content';
 import { myAgents } from '@/lib/distribution';
 import { Footer } from './footer';
 import { Masthead } from './masthead';
@@ -18,9 +19,12 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   // myAgents() only runs when the persona list does not already supply the clubs.
   const sessionClubs = current?.clubs ?? (actor.userId ? await myAgents(actor.userId) : []);
   const [activeOrg] = actor.activeOrgId
-    ? await getDb().select({ kind: orgs.kind }).from(orgs).where(eq(orgs.id, actor.activeOrgId))
+    ? await getDb().select({ kind: orgs.kind, slug: orgs.slug }).from(orgs).where(eq(orgs.id, actor.activeOrgId))
     : [];
-  const scopes = navigationFor(actor, sessionClubs, activeOrg?.kind === 'usg');
+  const departments = activeOrg && activeOrg.kind !== 'usg'
+    ? clubContent(activeOrg.slug).departments.map(({ slug, name }) => ({ slug, name }))
+    : [];
+  const scopes = navigationFor(actor, sessionClubs, activeOrg?.kind === 'usg', departments);
   // Signed out, the masthead gets no personas: names appear only after someone signs in.
   return (
     <>
