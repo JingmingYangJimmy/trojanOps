@@ -13,6 +13,7 @@ import { remaining } from '../gateway/quota';
 import { canUseWithGrants } from './effective-config';
 import { reasonLabel } from './labels';
 import { loadAgents } from './queries';
+import { retiredCatalogEntries } from './retired-catalog';
 import { ownInstallationLimit } from './write-support';
 
 export interface CatalogEntry {
@@ -80,12 +81,12 @@ export async function catalog(actor: Actor, orgId: string): Promise<ClubCatalog 
   const [org] = await getDb().select({ id: orgs.id, name: orgs.name }).from(orgs).where(eq(orgs.id, orgId));
   if (!org) return null;
 
-  const loaded = await loadAgents({ orgIds: [orgId] });
   const grants = actor.userId ? await grantsFor(actor.userId, orgId) : [];
   if (!grants.includes(`${orgId}:*`) && !(await isUsgAdmin(actor))) {
     throw new AppError({ code: 'forbidden', message: 'Only this club’s members can see its agent library.' });
   }
 
+  const loaded = await loadAgents({ orgIds: [orgId], excludeRetired: true });
   const canManage = actor.activeOrgId === orgId && actor.positions.includes('president');
   const club = await remaining({ scope: 'org', orgId });
 
@@ -120,5 +121,10 @@ export async function catalog(actor: Actor, orgId: string): Promise<ClubCatalog 
     }
   }
 
-  return { orgId, orgName: org.name, canManage, clubLimitMicro: club.limitMicro, agents };
+  // A template can retire between the two reads. Fresh terminal metadata wins over an earlier
+  // enabled snapshot, and one installation must never produce two rows/actions.
+  const byId = new Map(agents.map(agent => [agent.installationId, agent]));
+  for (const retired of await retiredCatalogEntries(orgId)) byId.set(retired.installationId, retired);
+  const ordered = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name) || a.installationId.localeCompare(b.installationId));
+  return { orgId, orgName: org.name, canManage, clubLimitMicro: club.limitMicro, agents: ordered };
 }

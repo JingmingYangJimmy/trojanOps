@@ -1,4 +1,4 @@
-// Owner: B. Policy edits cannot invalidate any stored installation (I7).
+// Owner: B. Policy edits cannot invalidate installations of non-retired templates (I7).
 import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { now } from '../clock';
@@ -19,11 +19,13 @@ export async function setClubPolicy(actor: Actor, orgId: string, input: z.infer<
     // Policy writes lock only the club, never templates: template writers take template→club.
     const [club] = await tx.select().from(orgs).where(eq(orgs.id, orgId)).for('no key update');
     if (club?.kind !== 'rso' || club.status !== 'active') throw invalid('Choose an active club.');
+    // Retired templates cannot run or be edited. Their historical overrides must not make
+    // policy tightening impossible; disabled and pinned ACTIVE templates are still checked.
     const rows = await tx.select({ installation: agentInstallations, version: agentTemplateVersions }).from(agentInstallations)
       .innerJoin(agentTemplates, eq(agentTemplates.id, agentInstallations.templateId))
       .leftJoin(agentTemplateVersions, and(eq(agentTemplateVersions.templateId, agentTemplates.id),
         eq(agentTemplateVersions.version, sql`case when ${agentInstallations.track} = 'pinned' and ${agentInstallations.pinnedVersion} is not null then ${agentInstallations.pinnedVersion} else ${agentTemplates.latestVersion} end`)))
-      .where(eq(agentInstallations.orgId, orgId));
+      .where(and(eq(agentInstallations.orgId, orgId), eq(agentTemplates.status, 'active')));
     const held = await tx.select().from(positions).where(eq(positions.orgId, orgId));
     const owned = await tx.select().from(sources).where(eq(sources.orgId, orgId));
     for (const { installation, version } of rows) {

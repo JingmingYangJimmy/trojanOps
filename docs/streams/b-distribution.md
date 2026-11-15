@@ -144,7 +144,7 @@ New §14 routes:
 - GET/PATCH `/api/usg/templates/:templateId`: immutable history/target summary and strict metadata
   edits (`name`, `target`, `distribution`). Changing a target affects future rollout/provisioning;
   it does not remove old installations. A distributed template keeps its distribution type.
-- PUT `/api/usg/club-policy/:orgId`: USG-only policy update. Checks every installed resolved version
+- PUT `/api/usg/club-policy/:orgId`: USG-only policy update. Checks every non-retired installed resolved version
   against the proposed policy before writing, including disabled/pinned installations. A conflicting
   override or public agent must be narrowed by its club first; the policy setter does not disable
   or rewrite that club's installation silently.
@@ -164,3 +164,21 @@ D2/D6 were also exercised through the local pages: distribute Event planning to 
 Sam's standard-model override with the economy cap, publish the $10,000 funding pack, and run the
 funding agent through the gateway to see v2. Use `pnpm db:reset` before the full test run after such
 browser checks, since those demo actions deliberately change the seeded database.
+
+
+### Retired installations and policy tightening
+
+Terminal retired templates do not block a later policy change. Disabled and pinned installations
+of active templates still pass the full I7 policy check before any write. Historical versions,
+installation overrides, quotas and audit history are not rewritten or deleted to satisfy a new
+policy. Catalog reads retired presentation metadata separately, marks it unavailable, and never
+uses that projection as an `EffectiveAgent`; a fresh retired record wins over an earlier active
+snapshot when retirement races the read. Runtime composition and policy clamps remain unchanged.
+A now policy-incompatible retired installation fails closed with the generic runtime clamp refusal
+before execution, rather than reaching A's specific retired-status denial message. Preserving that
+specific gateway message/audit for this case remains an A integration consideration.
+
+`tests/retired-policy.test.ts` covers public and disjoint-model policy changes after retirement,
+unchanged historical/pinned records, catalog visibility and concurrent retirement, exclusion from
+usable lists, and gateway rejection before runtime/quota use. It also checks that disabled/pinned
+installations of active templates still prevent incompatible changes.
