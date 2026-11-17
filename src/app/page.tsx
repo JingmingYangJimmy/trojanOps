@@ -8,7 +8,7 @@ import { accountFromParam } from '@/lib/identity/demo-accounts';
 import { personasEnabled } from '@/lib/identity/session';
 import { SignInForm } from './sign-in-form';
 
-export const metadata: Metadata = { title: 'Sign in · TrojanOps' };
+export const metadata: Metadata = { title: 'Demo sign-in · TrojanOps (not a USC service)' };
 
 export default async function Home({
   searchParams,
@@ -24,7 +24,7 @@ export default async function Home({
     return (
       <PageHeader
         title="Sign in"
-        description="NetID sign-in isn't available in this build. Set DEMO_MODE=1 to use the demo sign-in."
+        description="This is a demo build of a student project, not a USC service. NetID sign-in isn't available here. Set DEMO_MODE=1 to use the demo sign-in."
       />
     );
   }

@@ -1,14 +1,15 @@
 // Owner: A (WP-3). Demo sign-in form (DEMO_MODE): checks the sign-in ID and demo password in the
 // browser, then posts the account's user id to /api/session/persona and opens its landing page.
+// The page states plainly that it is a demo and not a USC service; it must never look like, or be
+// mistaken for, the real NetID sign-in.
 'use client';
 
 import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, Eye, EyeOff, Info, CircleHelp, ExternalLink } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, ShieldAlert, CircleHelp } from 'lucide-react';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import styles from './sign-in.module.css';
-import Image from 'next/image';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DEMO_PASSWORD, DEMO_SIGN_IN_IDS, matchAccount, type DemoAccount } from '@/lib/identity/demo-accounts';
@@ -67,8 +68,8 @@ export function SignInForm({ accounts, prefill }: Props) {
     event.preventDefault();
     if (inFlight.current || isPending) return; // one sign-in at a time
     const next: FieldErrors = {
-      id: signInId.trim() ? undefined : 'Enter your sign-in ID.',
-      password: password ? undefined : 'Enter your password.',
+      id: signInId.trim() ? undefined : 'Enter a demo sign-in ID.',
+      password: password ? undefined : 'Enter the demo password.',
     };
     setErrors(next);
     setFormError(null);
@@ -103,19 +104,21 @@ export function SignInForm({ accounts, prefill }: Props) {
           {isPending ? 'Signing in' : ''}
         </p>
 
-        <aside className={styles.notice}>
-          <Info aria-hidden />
-          <p><strong>Starting November 19, 2026,</strong> this Sign-in screen will change,
-            requiring you to enter your Sign-in ID and Password on separate screens. Learn more about{' '}
-            <a href="https://itservices.usc.edu/" target="_blank" rel="noreferrer">SSO Sign-in Updates <ExternalLink aria-hidden /></a>
+        <aside className={styles.warning} role="alert">
+          <ShieldAlert aria-hidden />
+          <p>
+            <strong>This is a fake sign-in page.</strong> TrojanOps is a student hackathon project, not
+            a USC service, and is not affiliated with or endorsed by the University of Southern
+            California. Sign in with one of the demo accounts listed below. Never type a real NetID or
+            a real password here.
           </p>
         </aside>
         <h1 className={styles.logo}>
-          <Image src="/usc-primary-monogram.png" alt="USC" width={245} height={81} priority />
-          <span className="sr-only">Demo sign-in</span>
+          TrojanOps
+          <span>Demo environment · fictional people, clubs and documents</span>
         </h1>
         <section className={styles.card} aria-labelledby="sign-in-heading">
-          <h2 id="sign-in-heading">Welcome! Please sign in to continue.</h2>
+          <h2 id="sign-in-heading">Sign in with a demo account</h2>
 
           {/* method="post": a submit before hydration must never put the password in the URL. */}
           <form method="post" noValidate onSubmit={submit} className={styles.form}>
@@ -126,7 +129,7 @@ export function SignInForm({ accounts, prefill }: Props) {
               </Alert>
             )}
 
-            <Label htmlFor="sign-in-id">Sign-in ID (netid@usc.edu) <span title="Use the demo sign-in ID provided by the presenter."><CircleHelp aria-label="Sign-in ID help" /></span></Label>
+            <Label htmlFor="sign-in-id">Demo sign-in ID <span title="A demo role name such as president or member. This is not a USC NetID."><CircleHelp aria-label="Sign-in ID help" /></span></Label>
             <Input
               ref={idRef}
               id="sign-in-id"
@@ -136,8 +139,8 @@ export function SignInForm({ accounts, prefill }: Props) {
                 setSignInId(e.target.value);
                 if (errors.id && e.target.value.trim()) setErrors((prev) => ({ ...prev, id: undefined }));
               }}
-              placeholder="e.g., tommy@usc.edu"
-              autoComplete="username"
+              placeholder="e.g., president"
+              autoComplete="off"
               autoCapitalize="none"
               spellCheck={false}
               aria-invalid={errors.id ? true : undefined}
@@ -146,7 +149,7 @@ export function SignInForm({ accounts, prefill }: Props) {
             {errors.id && <FieldError id="sign-in-id-error" message={errors.id} />}
 
             <Label htmlFor="sign-in-password" className={styles.passwordLabel}>
-              Password
+              Demo password
             </Label>
             <div className="relative">
               <Input
@@ -159,7 +162,7 @@ export function SignInForm({ accounts, prefill }: Props) {
                   setPassword(e.target.value);
                   if (errors.password && e.target.value) setErrors((prev) => ({ ...prev, password: undefined }));
                 }}
-                autoComplete="current-password"
+                autoComplete="off"
                 autoCapitalize="none"
                 spellCheck={false}
                 className="pr-11"
@@ -185,19 +188,20 @@ export function SignInForm({ accounts, prefill }: Props) {
             </Button>
           </form>
         </section>
-        <nav className={styles.recovery} aria-label="Account recovery">
-          <a href="https://netid.usc.edu/">Forgot NetID</a>
-          <a href="https://netid.usc.edu/">Forgot password</a>
-          <a href="https://netid.usc.edu/">Activate new account</a>
-        </nav>
         <div className={styles.help}>
-          <p>If you wish to sign out after logging in, close your web browser on Windows or quit your web browser on Mac. This step will prevent others from accessing your account when you are using a shared computer.</p>
-          <h2>Need help?</h2>
-          <a href="https://netid.usc.edu/">USC NetID Account Services <ExternalLink aria-hidden /></a>
-          <a href="https://policy.usc.edu/privacy-notice/">Privacy Notice <ExternalLink aria-hidden /></a>
-          <a href="https://eeotix.usc.edu/">Notice of Non-Discrimination <ExternalLink aria-hidden /></a>
-          <a href="https://accessibility.usc.edu/">Digital Accessibility <ExternalLink aria-hidden /></a>
-          <p className={styles.demo}>Demo sign-in. Use demo accounts only and never enter your real USC password. Ask the presenter for a sign-in link.</p>
+          <h2>Demo accounts</h2>
+          <p>
+            Sign-in ID: <code>admin</code>, <code>president</code>, <code>treasurer</code>,{' '}
+            <code>successor</code>, <code>member</code>, <code>student</code>, <code>multi</code> or{' '}
+            <code>reviewer</code>.
+          </p>
+          <p>
+            Password for every one of them: <code>{DEMO_PASSWORD}</code>.
+          </p>
+          <p className={styles.demo}>
+            Demo sign-in. Use these demo accounts only and never enter your real USC password. This
+            site stores no real credentials and reaches no USC system.
+          </p>
         </div>
       </div>
     </div>

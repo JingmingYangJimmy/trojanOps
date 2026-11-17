@@ -64,15 +64,27 @@ describe('SignInForm markup', () => {
 
   it('labels both fields, states it is a demo, and shows no display names', () => {
     const html = renderToStaticMarkup(createElement(SignInForm, { accounts: fixture, prefill: null }));
-    expect(html).toMatch(/<label[^>]*for="sign-in-id"[^>]*>Sign-in ID \(netid@usc.edu\)[\s\S]*?<\/label>/);
-    expect(html).toMatch(/<label[^>]*for="sign-in-password"[^>]*>Password<\/label>/);
+    expect(html).toMatch(/<label[^>]*for="sign-in-id"[^>]*>Demo sign-in ID[\s\S]*?<\/label>/);
+    expect(html).toMatch(/<label[^>]*for="sign-in-password"[^>]*>Demo password<\/label>/);
     expect(html).toContain('Demo sign-in.');
     expect(html).toContain('never enter your real USC password');
     expect(html).not.toMatch(NAMES);
     expect(html).not.toContain('value="sam@demo.trojanops.test"'); // only the placeholder, no value
-    expect(html).toContain('placeholder="e.g., tommy@usc.edu"');
+    expect(html).toContain('placeholder="e.g., president"');
     expect(html).toMatch(/id="sign-in-id"[^>]*value="admin"/);
     expect(html).toMatch(/type="password"[^>]*value="fighton"/);
+  });
+
+  it('says plainly that it is a fake page and not a USC service, and imitates no USC chrome', () => {
+    const html = renderToStaticMarkup(createElement(SignInForm, { accounts: fixture, prefill: null }));
+    expect(html).toContain('This is a fake sign-in page.');
+    expect(html).toContain('not affiliated with or endorsed by the University of Southern California');
+    expect(html).toContain('Never type a real NetID or a real password here.');
+    // No USC branding, no links that could pass for the real NetID service.
+    expect(html).not.toContain('usc-primary-monogram');
+    expect(html).not.toContain('netid.usc.edu');
+    expect(html).not.toContain('itservices.usc.edu');
+    expect(html).not.toContain('Forgot NetID');
   });
 
   it('prefills the sign-in ID and a masked password for a /?account=N link', () => {
@@ -131,7 +143,7 @@ describe.skipIf(!probe)('the / page', () => {
     expect(html).toContain('value="member"');
     signInAs(null);
     const empty = renderToStaticMarkup(await render({ account: '99' }));
-    expect(empty).toContain('Please sign in to continue.');
+    expect(empty).toContain('Sign in with a demo account');
     expect(empty).toContain('value="admin"');
     expect(empty).toContain('value="fighton"');
   });
